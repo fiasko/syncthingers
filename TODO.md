@@ -1,11 +1,11 @@
-# TODO List: Syncthing Tray Controller
+# TODO List: Syncthinger
 
 This document outlines the development plan for a Rust-based Windows system tray application to manage Syncthing.
 
 ## Phase 1: Project Setup & Core Dependencies
 
-- [ ] Initialize a new Rust project: `cargo new syncthing_tray_controller --bin`
-- [ ] Add `#![windows_subsystem = "windows"]` to `main.rs` to hide the console window on launch.
+- [x] Initialize a new Rust project: `cargo new syncthinger`
+- [x] Add `#![windows_subsystem = "windows"]` to `main.rs` to hide the console window on launch.
 - [ ] Research and choose a system tray library suitable for Windows:
     - [ ] Evaluate `tray-item` (cross-platform, might be simpler to start).
     - [ ] Evaluate `systray` (another cross-platform option).

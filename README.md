@@ -33,11 +33,12 @@
         ```bash
         cargo build --release
         ```
-    The executable will be located in `target/debug/syncthinger.exe` or `target/release/syncthinger.exe`.
+    The executable will be located in `target/debug/syncthingers.exe` or `target/release/syncthingers.exe`.
 
 ## Running
 
 1. After building, run the executable (`syncthingers.exe`).
+ *   A log file named `syncthingers.log` will be created in the same directory as the executable. This file can be useful for troubleshooting.
 2.  On the first run, or if `configuration.json` is not found, a default one might be created (this functionality is planned). You will need to edit this file to point to your `syncthing.exe` and its web UI.
 
 ## Configuration

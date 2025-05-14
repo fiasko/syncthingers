@@ -9,10 +9,11 @@ This document outlines the development plan for a Rust-based Windows system tray
 - [x] Research and choose `tray-item` system tray library.
 - [x] Add `tray-item` to `Cargo.toml`.
 - [x] Add `serde` and `serde_json` for configuration file handling: `cargo add serde serde_json --features serde/derive`
-- [ ] Add `opener` crate for opening web pages and files: `cargo add opener`
-- [ ] Add `thiserror` for custom error types: `cargo add thiserror`
-- [ ] Add `log` and a logger implementation (e.g., `env_logger` or `simplelog`): `cargo add log env_logger`
-- [ ] Set up basic logging configuration.
+- [x] Add `opener` crate for opening web pages and files: `cargo add opener`
+- [x] Add `thiserror` for custom error types: `cargo add thiserror`
+- [x] Implement singleton instance check using a named mutex (Windows) in a modular way (`single_instance.rs`).
+- [x] Add `log` and `simplelog` logger implementation: `cargo add log simplelog`.
+- [x] Set up basic logging using `simplelog` (default file logger, conditional terminal logger).
 
 ## Phase 2: Configuration Management (`configuration.json`)
 
@@ -20,7 +21,10 @@ This document outlines the development plan for a Rust-based Windows system tray
     - [ ] `syncthing_executable_path`: Full path to `syncthing.exe`.
     - [ ] `syncthing_gui_url`: URL for Syncthing's web UI (e.g., `http://127.0.0.1:8384`).
     - [ ] `syncthing_startup_args`: (Optional) Array of strings for arguments to pass to `syncthing.exe` on start.
+    - [ ] `log_level`: (Optional) String for log level (e.g., "Info", "Debug", "Error", defaults to "Info").
+    - [ ] `log_file_path`: (Optional) Path for the log file (e.g., defaults to a path in `%APPDATA%/<AppName>/app.log` or alongside the executable).
     - [ ] `config_file_path`: Path to this `configuration.json` file (for "Open Configuration" feature, could be self-determined).
+- [ ] Make logging configurable (level, file path) via `configuration.json`, updating `logger::init_logging`.
 - [ ] Implement a `Config` struct with `serde::Deserialize` and `serde::Serialize`.
 - [ ] Implement a function to load `configuration.json`:
     - [ ] Determine path (e.g., alongside the executable, or in `%APPDATA%/<AppName>`).
@@ -32,6 +36,7 @@ This document outlines the development plan for a Rust-based Windows system tray
 
 ## Phase 3: Syncthing Process Management
 
+- [ ] Research and choose a method/crate for reliably finding external `syncthing.exe` processes by name or path (e.g., `sysinfo` crate).
 - [ ] Create a module/struct for managing the Syncthing process (e.g., `SyncthingManager`).
 - [ ] Implement `start_syncthing()`:
     - [ ] Read `syncthing_executable_path` and `syncthing_startup_args` from config.
@@ -41,12 +46,13 @@ This document outlines the development plan for a Rust-based Windows system tray
     - [ ] Handle errors (e.g., executable not found, failed to start).
 - [ ] Implement `stop_syncthing()`:
     - [ ] Use the stored `Child` handle to kill the process.
+    - [ ] If Syncthing was detected running externally, attempt to find its PID and terminate it.
     - [ ] On Windows, ensure it's a clean termination if possible (e.g., `taskkill /PID <pid>` if `child.kill()` is problematic, or investigate graceful shutdown signals if Syncthing supports them).
     - [ ] Clear the stored process handle.
     - [ ] Handle errors.
 - [ ] Implement `is_syncthing_running()`:
-    - [ ] Check the status of the stored `Child` handle (e.g., using `try_wait()`).
-    - [ ] If no handle exists (e.g., app just started), this might initially report "stopped" or attempt a more complex check (e.g., by process name, though this can be unreliable). For v1, primarily rely on the state managed by this app.
+    - [ ] Check the status of the stored `Child` handle (if Syncthing was started by this app).
+    - [ ] If no `Child` handle exists (or to confirm status), attempt to detect if `syncthing.exe` is running by querying system processes (e.g., based on configured executable path or a known process name).
     - [ ] Update an internal state variable reflecting Syncthing's status.
 
 ## Phase 4: System Tray Icon Implementation
@@ -95,7 +101,7 @@ This document outlines the development plan for a Rust-based Windows system tray
 - [ ] Define a central application state (e.g., in an `Arc<Mutex<AppState>>` or using an event channel like `crossbeam-channel`).
     - [ ] Store current `Config`.
     - [ ] Store `Option<std::process::Child>` for the Syncthing process.
-    - [ ] Store current Syncthing status (e.g., an enum `SyncthingStatus { Running, Stopped, Starting, Stopping }`).
+    - [ ] Store current Syncthing status (e.g., an enum `SyncthingStatus { Stopped, Starting, RunningManaged, RunningExternal, Stopping }`).
     - [ ] Store handles/IDs to menu items if they need to be dynamically enabled/disabled or have their text changed.
 - [ ] Implement the main event loop that processes messages from `tray-item` (menu clicks) and potentially other sources (e.g., timers for status checks).
 - [ ] Ensure UI updates (icon, tooltip, menu states) are consistently reflecting the application state.
@@ -130,9 +136,12 @@ This document outlines the development plan for a Rust-based Windows system tray
 - [ ] Review and refactor code for clarity, efficiency, and robustness.
 - [ ] Consider adding simple notifications (e.g., "Syncthing started", "Error: Syncthing not found") using a crate like `notify-rust` if desired, though this adds complexity.
 - [ ] Ensure graceful shutdown: what happens to Syncthing if the tray app is closed or crashes? (Configurable: leave running vs. stop).
-- [ ] Initial status check: When the tray app starts, if `syncthing.exe` is *already* running (not started by this app), how should it behave?
-    - [ ] Option 1 (Simpler): Assume it's not running until "Start" is clicked.
-    - [ ] Option 2 (Advanced): Try to detect an existing Syncthing process and reflect its status. This is harder to do reliably.
+- [ ] Implement initial and ongoing status check for externally started Syncthing:
+    - [ ] On Syncthingers startup, and periodically (or on demand via `is_syncthing_running`), check if `syncthing.exe` (as configured, or by common process name) is running, even if not started by this app.
+    - [ ] If detected as running externally:
+        - [ ] Update UI (icon, tooltip, menu states: "Start" disabled, "Stop" enabled).
+        - [ ] The "Stop Syncthing" action should attempt to terminate this external process.
+    - [ ] If an externally running Syncthing instance stops (or one managed by the app stops unexpectedly), Syncthingers should detect this and update its UI.
 
 ## Future Considerations (Optional)
 

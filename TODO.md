@@ -6,11 +6,8 @@ This document outlines the development plan for a Rust-based Windows system tray
 
 - [x] Initialize a new Rust project: `cargo new syncthinger`
 - [x] Add `#![windows_subsystem = "windows"]` to `main.rs` to hide the console window on launch.
-- [ ] Research and choose a system tray library suitable for Windows:
-    - [ ] Evaluate `tray-item` (cross-platform, might be simpler to start).
-    - [ ] Evaluate `systray` (another cross-platform option).
-    - [ ] Consider `windows-rs` for direct WinAPI calls if more fine-grained control or specific Windows features are needed.
-- [ ] Add chosen system tray library to `Cargo.toml`.
+- [x] Research and choose `tray-item` system tray library.
+- [x] Add `tray-item` to `Cargo.toml`.
 - [ ] Add `serde` and `serde_json` for configuration file handling: `cargo add serde serde_json --features serde/derive`
 - [ ] Add `opener` crate for opening web pages and files: `cargo add opener`
 - [ ] Add `thiserror` for custom error types: `cargo add thiserror`
@@ -54,14 +51,14 @@ This document outlines the development plan for a Rust-based Windows system tray
 
 ## Phase 4: System Tray Icon Implementation
 
-- [ ] Initialize the system tray icon in `main.rs` using the chosen library.
+- [ ] Initialize the system tray icon in `main.rs` using `tray-item`.
 - [ ] Prepare two icons (e.g., `.ico` files for Windows):
     - [ ] `icon_syncthing_running.ico`
     - [ ] `icon_syncthing_stopped.ico`
 - [ ] Embed icons into the binary (e.g., using `include_bytes!`) or load them from files packaged with the app.
 - [ ] Implement a function to update the tray icon based on Syncthing's running status.
 - [ ] Implement a function to update the tray icon's tooltip text (e.g., "Syncthing: Running", "Syncthing: Stopped").
-- [ ] Set up the main application loop required by the tray library to keep the icon responsive.
+- [ ] Set up the main application loop required by `tray-item` to keep the icon responsive.
 
 ## Phase 5: Tray Menu and Actions
 
@@ -100,7 +97,7 @@ This document outlines the development plan for a Rust-based Windows system tray
     - [ ] Store `Option<std::process::Child>` for the Syncthing process.
     - [ ] Store current Syncthing status (e.g., an enum `SyncthingStatus { Running, Stopped, Starting, Stopping }`).
     - [ ] Store handles/IDs to menu items if they need to be dynamically enabled/disabled or have their text changed.
-- [ ] Implement the main event loop that processes messages from the tray library (menu clicks) and potentially other sources (e.g., timers for status checks).
+- [ ] Implement the main event loop that processes messages from `tray-item` (menu clicks) and potentially other sources (e.g., timers for status checks).
 - [ ] Ensure UI updates (icon, tooltip, menu states) are consistently reflecting the application state.
 - [ ] Periodically check Syncthing's status if it was started by the app:
     - [ ] If `child.try_wait()` indicates it has exited unexpectedly, update status and UI.

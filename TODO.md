@@ -1,14 +1,14 @@
-# TODO List: Syncthinger
+# TODO List: Syncthingers
 
 This document outlines the development plan for a Rust-based Windows system tray application to manage Syncthing.
 
 ## Phase 1: Project Setup & Core Dependencies
 
-- [x] Initialize a new Rust project: `cargo new syncthinger`
+- [x] Initialize a new Rust project: `cargo new syncthingers`
 - [x] Add `#![windows_subsystem = "windows"]` to `main.rs` to hide the console window on launch.
 - [x] Research and choose `tray-item` system tray library.
 - [x] Add `tray-item` to `Cargo.toml`.
-- [ ] Add `serde` and `serde_json` for configuration file handling: `cargo add serde serde_json --features serde/derive`
+- [x] Add `serde` and `serde_json` for configuration file handling: `cargo add serde serde_json --features serde/derive`
 - [ ] Add `opener` crate for opening web pages and files: `cargo add opener`
 - [ ] Add `thiserror` for custom error types: `cargo add thiserror`
 - [ ] Add `log` and a logger implementation (e.g., `env_logger` or `simplelog`): `cargo add log env_logger`

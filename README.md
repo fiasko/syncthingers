@@ -23,11 +23,7 @@
 
 ## Building
 
-1.  **Clone the repository (if you haven't already):**
-    ```bash
-    git clone <your-repo-url>
-    cd syncthinger
-    ```
+1.  **Navigate to the project directory if you haven't already.**
 2.  **Build the project:**
     *   For development:
         ```bash

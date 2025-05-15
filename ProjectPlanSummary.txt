@@ -7,16 +7,17 @@ The "Syncthingers" project aims to develop a lightweight, Rust-based singleton s
 Development Plan (Feature-Oriented):
 ------------------------------------
 - The application will be a singleton: it will check for and enforce that only one instance is running at any time.
+- The codebase will be designed with an optional platform-independent API in mind, so that future versions can support other operating systems, even though the first version will be Windows-only.
 - Core dependencies include system tray functionality (e.g., tray-item), configuration management (serde/serde_json), URL/file launching (opener), custom error handling (thiserror), and logging (log/simplelog).
 - The configuration will be managed via a configuration.json file, with support for customizable logging (log level, file path), Syncthing executable path, web UI URL, and startup arguments.
-- The app will manage the Syncthing process: start, stop, and monitor its status, primarily for instances started by this app, but with future consideration for detecting external instances.
+- The app will manage the Syncthing process: start, stop, and monitor its status, primarily for instances started by this app, but with future consideration for detecting external instances (e.g., if Syncthing is already running in the background, the app should detect and optionally manage that instance as well).
 - The system tray icon will reflect Syncthing's running/stopped state, with dynamic icon and tooltip updates.
 - The tray menu will provide actions for starting/stopping Syncthing, opening the web UI, opening the configuration file, and exiting the application.
 - Application state will be centrally managed, including configuration, process handle, and UI state.
 - Robust error handling will be implemented, with user feedback via logs and native dialogs for critical errors.
 - The build will be Windows-specific, embedding icons and version info, and producing a distributable executable.
 - The app will be thoroughly tested for graceful shutdown, correct singleton behavior, and proper handling of configuration and process management.
-- Future enhancements may include auto-start options, advanced status detection, and a simple UI panel.
+- Future enhancements may include auto-start options, advanced status detection, a simple UI panel, and cross-platform support.
 
 Development Approach and AI Interaction:
 -----------------------------------------

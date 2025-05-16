@@ -32,10 +32,11 @@
 - [x] If singleton is acquired, continue normal startup
 
 ## Configuration Management
-- [ ] Define `configuration.json` structure (Syncthing path, web UI URL, startup args)
-- [ ] Implement `Config` struct with serde serialization/deserialization
-- [ ] Load configuration from file or create default if missing
-- [ ] Add feature to open config file from the app
+- [x] Define `configuration.json` structure (logging level, Syncthing path, web UI URL, startup args)
+- [x] Implement `Config` struct with serde serialization/deserialization
+- [x] Load configuration from file or create default if missing
+- [x] Make logging behavior configurable via config
+- [x] Add feature to open config file from the app
 
 ## Syncthing Process Management
 - [ ] Implement process management (start, stop, monitor Syncthing)

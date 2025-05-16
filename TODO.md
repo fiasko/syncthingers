@@ -77,6 +77,13 @@
 - [ ] Test tray UI and menu actions
 - [ ] Test graceful shutdown and cleanup
 
+## Syncthing Transfer Speed Monitoring
+- [ ] Add a configurable option in the configuration to enable/disable transfer speed monitoring
+- [ ] Use Syncthing's REST API to fetch transfer speed data
+- [ ] Display current transfer speeds in the tray menu or tooltip
+- [ ] Log transfer speed data if enabled
+- [ ] Make polling interval and display options configurable
+
 ## Future Enhancements (Optional)
 - [ ] Auto-start Syncthing with the app
 - [ ] Start tray app with Windows

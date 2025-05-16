@@ -1,6 +1,14 @@
-# Syncthingers Singleton Tray App: Step-by-Step Guide
+# Syncthingers Singleton Tray App: Step-by-Step plan and general project instructions
 
-This checklist provides a step-by-step development guide for building the Syncthingers singleton system tray application for Windows in Rust.
+# global best practices
+- The codebase will be designed with an optional platform-independent API in mind, so that future versions can support other operating systems, even though the first version will be Windows-only.
+- Log key events and errors throughout the app.
+- Ensure robust error handling, with user feedback via logs and native dialogs for critical errors.
+- Centralize application state management (configuration, process handle, UI state).
+- Use clear, maintainable code and document requirements/goals for each task.
+- Test thoroughly for graceful shutdown, correct singleton behavior, and proper handling of configuration and process management.
+
+# This checklist provides a step-by-step development guide for building the Syncthingers singleton system tray application for Windows in Rust.
 
 ## Project Initialization
 - [x] Create a new Rust binary project
@@ -22,9 +30,6 @@ This checklist provides a step-by-step development guide for building the Syncth
 - [x] Use `SingletonGuard::acquire()` in `main.rs` for singleton enforcement
 - [x] If singleton cannot be acquired, show user feedback (e.g., message box) and exit
 - [x] If singleton is acquired, continue normal startup
-
-## Development Practices
-- [ ] Log key events and errors throughout the app (global best practice)
 
 ## Configuration Management
 - [ ] Define `configuration.json` structure (Syncthing path, web UI URL, startup args)

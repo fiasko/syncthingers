@@ -23,16 +23,14 @@ This checklist provides a step-by-step development guide for building the Syncth
 - [x] If singleton cannot be acquired, show user feedback (e.g., message box) and exit
 - [x] If singleton is acquired, continue normal startup
 
+## Development Practices
+- [ ] Log key events and errors throughout the app (global best practice)
+
 ## Configuration Management
-- [ ] Define `configuration.json` structure (logging, Syncthing path, web UI URL, startup args)
+- [ ] Define `configuration.json` structure (Syncthing path, web UI URL, startup args)
 - [ ] Implement `Config` struct with serde serialization/deserialization
 - [ ] Load configuration from file or create default if missing
-- [ ] Make logging behavior configurable via config
 - [ ] Add feature to open config file from the app
-
-## Logging
-- [ ] Initialize logging as per config (level, file path)
-- [ ] Log key events and errors throughout the app
 
 ## Syncthing Process Management
 - [ ] Implement process management (start, stop, monitor Syncthing)

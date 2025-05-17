@@ -5,6 +5,8 @@ mod logging;
 mod config;
 mod process;
 mod tray_ui;
+mod app_state;
+mod error_handling;
 
 use simplelog::LevelFilter;
 use config::Config;

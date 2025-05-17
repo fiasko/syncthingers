@@ -59,13 +59,13 @@
 - [x] Implement menu actions and state updates
 
 ## Application State Management
-- [ ] Centralize app state (config, process handle, UI state)
-- [ ] Ensure thread-safe access (e.g., Arc<Mutex<_>>)
+- [x] Centralize app state (config, process handle, UI state)
+- [x] Ensure thread-safe access (e.g., Arc<Mutex<_>>)
 
 ## Error Handling & User Feedback
-- [ ] Use custom error types throughout
-- [ ] Log all errors
-- [ ] Show native dialog for critical errors (e.g., config missing, Syncthing not found)
+- [x] Use custom error types throughout
+- [x] Log all errors
+- [x] Show native dialog for critical errors (e.g., config missing, Syncthing not found)
 
 ## Windows-Specific Build & Packaging
 - [ ] Embed icons and version info in executable

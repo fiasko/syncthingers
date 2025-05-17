@@ -57,6 +57,11 @@
     - [x] Open App Configuration
     - [x] Exit
 - [x] Implement menu actions and state updates
+- [ ] Implement tray menu action handling:
+    - [ ] Start/Stop Syncthing process from menu
+    - [ ] Open Syncthing Web UI in browser
+    - [ ] Open configuration file in editor
+    - [ ] Exit application cleanly
 
 ## Application State Management
 - [x] Centralize app state (config, process handle, UI state)

@@ -1,8 +1,0 @@
-{
-  "log_level": "info",
-  "syncthing_path": "C:/Program Files/Syncthing/syncthing.exe",
-  "web_ui_url": "http://localhost:8384",
-  "startup_args": [
-    "-no-browser"
-  ]
-}

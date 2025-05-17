@@ -46,17 +46,17 @@
 - [x] Detect if Syncthing was started by this app
 
 ## System Tray UI
-- [ ] Add tray icon (running/stopped state)
-    - [ ] Use `assets/icons/syncthing_green.ico` for running state
-    - [ ] Use `assets/icons/syncthing_red.ico` for stopped state
-- [ ] Update icon and tooltip based on Syncthing status
-- [ ] Design tray menu:
-    - [ ] Status indicator
-    - [ ] Start/Stop Syncthing
-    - [ ] Open Syncthing Web UI
-    - [ ] Open App Configuration
-    - [ ] Exit
-- [ ] Implement menu actions and state updates
+- [x] Add tray icon (running/stopped state)
+    - [x] Use `assets/icons/syncthing_green.ico` for running state
+    - [x] Use `assets/icons/syncthing_red.ico` for stopped state
+- [x] Update icon and tooltip based on Syncthing status
+- [x] Design tray menu:
+    - [x] Status indicator
+    - [x] Start/Stop Syncthing
+    - [x] Open Syncthing Web UI
+    - [x] Open App Configuration
+    - [x] Exit
+- [x] Implement menu actions and state updates
 
 ## Application State Management
 - [ ] Centralize app state (config, process handle, UI state)

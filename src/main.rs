@@ -4,6 +4,7 @@ mod singleton;
 mod logging;
 mod config;
 mod process;
+mod tray_ui;
 
 use simplelog::LevelFilter;
 use config::Config;

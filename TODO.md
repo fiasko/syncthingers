@@ -37,6 +37,7 @@
 - [x] Load configuration from file or create default if missing
 - [x] Make logging behavior configurable via config
 - [x] Add feature to open config file from the app
+- [x] Add command line argument to only create default config file if it doesn't exist and exit
 
 ## Syncthing Process Management
 - [x] Implement process management (start, stop, monitor Syncthing)

@@ -7,13 +7,22 @@ mod process;
 
 use simplelog::LevelFilter;
 use config::Config;
+use std::env;
 
 fn main() {
+    // Check for command line argument to only create default config and exit
+    let args: Vec<String> = env::args().collect();
+   
     let config = Config::load_or_create("configuration.json")
         .unwrap_or_else(|e| {
             eprintln!("Error: failed to load or create configuration file: {e}");
             std::process::exit(1);
         });
+
+    // Check if --create-config argument is present and exit
+    if args.iter().any(|a| a == "--create-config") {
+        return;
+    }
 
     // Initialize logging as per config
     let log_level = match config.log_level.to_lowercase().as_str() {

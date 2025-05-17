@@ -39,13 +39,15 @@
 - [x] Add feature to open config file from the app
 
 ## Syncthing Process Management
-- [ ] Implement process management (start, stop, monitor Syncthing)
-- [ ] Store process handle for management
-- [ ] Handle errors (e.g., executable not found, failed to start)
-- [ ] Detect if Syncthing was started by this app
+- [x] Implement process management (start, stop, monitor Syncthing)
+- [x] Store process handle for management
+- [x] Handle errors (e.g., executable not found, failed to start)
+- [x] Detect if Syncthing was started by this app
 
 ## System Tray UI
 - [ ] Add tray icon (running/stopped state)
+    - [ ] Use `assets/icons/syncthing_green.ico` for running state
+    - [ ] Use `assets/icons/syncthing_red.ico` for stopped state
 - [ ] Update icon and tooltip based on Syncthing status
 - [ ] Design tray menu:
     - [ ] Status indicator

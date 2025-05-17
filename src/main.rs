@@ -3,13 +3,17 @@
 mod singleton;
 mod logging;
 mod config;
+mod process;
 
 use simplelog::LevelFilter;
 use config::Config;
 
 fn main() {
     let config = Config::load_or_create("configuration.json")
-        .expect("Failed to load or create configuration file");
+        .unwrap_or_else(|e| {
+            eprintln!("Error: failed to load or create configuration file: {e}");
+            std::process::exit(1);
+        });
 
     // Initialize logging as per config
     let log_level = match config.log_level.to_lowercase().as_str() {
@@ -27,5 +31,8 @@ fn main() {
         return;
     }
     log::info!("Application starting");
-    println!("Hello, world!");
+    
+    
+
+    log::info!("Application closing");
 }

@@ -24,7 +24,7 @@ pub struct TrayUi {
 
 impl TrayUi {
     pub fn new(app_state: Arc<Mutex<AppState>>) -> Result<Self, Box<dyn Error>> {
-        let tray = TrayItem::new("Syncthingers", tray_item::IconSource::Resource("assets/icons/syncthing_red.ico"))?;
+        let tray = TrayItem::new("Syncthingers", tray_item::IconSource::Resource("syncthing_green"))?;
         Ok(Self {
             tray,
             state: TrayState::Stopped,
@@ -35,10 +35,10 @@ impl TrayUi {
     pub fn set_state(&mut self, state: TrayState) {
         match state {
             TrayState::Running => {
-                let _ = self.tray.set_icon(tray_item::IconSource::Resource("assets/icons/syncthing_green.ico"));
+                let _ = self.tray.set_icon(tray_item::IconSource::Resource("syncthing_green"));
             }
             TrayState::Stopped => {
-                let _ = self.tray.set_icon(tray_item::IconSource::Resource("assets/icons/syncthing_red.ico"));
+                let _ = self.tray.set_icon(tray_item::IconSource::Resource("syncthing_red"));
             }
         }
         self.state = state;

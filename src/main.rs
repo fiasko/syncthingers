@@ -38,6 +38,8 @@ fn main() {
     };
     logging::init_logging(log_level, "syncthingers.log");
     
+    log::info!("Startup arguments: {:?}", config.startup_args);
+
     if singleton::platform::SingletonGuard::acquire().is_none() {
         log::warn!("Another instance of the application is already running. Exiting.");
         return;

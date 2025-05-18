@@ -8,15 +8,34 @@ pub struct SyncthingProcess {
 
 impl SyncthingProcess {
     pub fn start(exe_path: &str, args: &[String]) -> io::Result<Self> {
-        let child = Command::new(exe_path)
-            .args(args)
-            .stdout(Stdio::null())
-            .stderr(Stdio::null())
-            .spawn()?;
-        Ok(Self {
-            child: Some(child),
-            started_by_app: true,
-        })
+        #[cfg(target_os = "windows")]
+        {
+            use std::os::windows::process::CommandExt;
+            // CREATE_NO_WINDOW = 0x08000000
+            const CREATE_NO_WINDOW: u32 = 0x08000000;
+            let child = Command::new(exe_path)
+                .args(args)
+                .stdout(Stdio::null())
+                .stderr(Stdio::null())
+                .creation_flags(CREATE_NO_WINDOW)
+                .spawn()?;
+            return Ok(Self {
+                child: Some(child),
+                started_by_app: true,
+            });
+        }
+        #[cfg(not(target_os = "windows"))]
+        {
+            let child = Command::new(exe_path)
+                .args(args)
+                .stdout(Stdio::null())
+                .stderr(Stdio::null())
+                .spawn()?;
+            Ok(Self {
+                child: Some(child),
+                started_by_app: true,
+            })
+        }
     }
 
     pub fn stop(&mut self) -> io::Result<()> {
@@ -42,8 +61,12 @@ impl SyncthingProcess {
             use std::process::Command;
             let output = Command::new("tasklist").output()?;
             let output_str = String::from_utf8_lossy(&output.stdout);
+            log::info!("Checking for existing Syncthing process with path: {}", exe_path);
             if output_str.to_lowercase().contains(&exe_path.to_lowercase()) {
+                log::info!("Detected running Syncthing process: {}", exe_path);
                 return Ok(Some(Self { child: None, started_by_app: false }));
+            } else {
+                log::info!("No running Syncthing process detected for path: {}", exe_path);
             }
         }
         Ok(None)

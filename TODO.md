@@ -38,15 +38,15 @@
 - [x] Make logging behavior configurable via config
 - [x] Add feature to open config file from the app
 - [x] Add command line argument to only create default config file if it doesn't exist and exit
-- [ ] When creating the default config file, try to detect `syncthing.exe` in the system PATH and use its path if found.
+- [x] When creating the default config file, try to detect `syncthing.exe` in the system PATH and use its path if found.
 
 ## Syncthing Process Management
 - [x] Implement process management (start, stop, monitor Syncthing)
 - [x] Store process handle for management
 - [x] Handle errors (e.g., executable not found, failed to start)
 - [x] Detect if Syncthing was started by this app
-- [ ] Monitor the Syncthing process: if `syncthing.exe` is killed or crashes, update the tray icon state accordingly.
-- [ ] When starting `syncthing.exe`, ensure it does not open a terminal window (should be fully background/hidden).
+- [x] Monitor the Syncthing process: if `syncthing.exe` is killed or crashes, update the tray icon state accordingly.
+- [x] When starting `syncthing.exe`, ensure it does not open a terminal window (should be fully background/hidden).
 
 ## System Tray UI
 - [x] Add tray icon (running/stopped state)

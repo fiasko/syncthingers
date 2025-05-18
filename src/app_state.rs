@@ -35,12 +35,14 @@ impl AppState {
         let proc = crate::process::SyncthingProcess::start(exe_path, args)
             .map_err(|e| crate::error_handling::AppError::ProcessError(format!("Failed to start Syncthing: {}", e)))?;
         self.syncthing_process = Some(proc);
+        log::info!("Syncthing process started successfully.");
         Ok(())
     }
 
     pub fn stop_syncthing(&mut self) -> Result<(), crate::error_handling::AppError> {
         if let Some(proc) = &mut self.syncthing_process {
             proc.stop().map_err(|e| crate::error_handling::AppError::ProcessError(format!("Failed to stop Syncthing: {}", e)))?;
+            log::info!("Syncthing process stopped successfully.");
         }
         self.syncthing_process = None;
         Ok(())

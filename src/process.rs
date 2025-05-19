@@ -88,18 +88,41 @@ impl SyncthingProcess {
     }
 
     pub fn detect_existing(exe_path: &str) -> io::Result<Option<Self>> {
-        // On Windows, use tasklist to check for syncthing.exe
         #[cfg(target_os = "windows")]
         {
             use std::process::Command;
-            let output = Command::new("tasklist").output()?;
+            use std::path::Path;
+            let exe_filename = Path::new(exe_path)
+                .file_name()
+                .map(|f| f.to_string_lossy().to_string())
+                .unwrap_or_default();
+            // Use wmic to get all processes with ExecutablePath and ProcessId
+            let output = Command::new("wmic")
+                .args(["process", "where", &format!("name='{}'", exe_filename), "get", "ExecutablePath,ProcessId", "/format:csv"])
+                .output()?;
             let output_str = String::from_utf8_lossy(&output.stdout);
-            log::info!("Checking for existing Syncthing process with path: {}", exe_path);
-            if output_str.to_lowercase().contains(&exe_path.to_lowercase()) {
-                log::info!("Detected running Syncthing process: {}", exe_path);
-                return Ok(Some(Self { child: None, started_by_app: false, job_handle: None }));
+            let exe_path_lower = exe_path.to_lowercase();
+            let mut found_filename = false;
+            for line in output_str.lines() {
+                // Each line is CSV: Node,ExecutablePath,ProcessId
+                let parts: Vec<_> = line.split(',').collect();
+                if parts.len() < 3 { continue; }
+                let path = parts[1].trim();
+                if path.is_empty() { continue; }
+                let path_lower = path.to_lowercase();
+                if path_lower == exe_path_lower {
+                    log::info!("Detected running Syncthing process with full path match: {}", path);
+                    return Ok(Some(Self { child: None, started_by_app: false, job_handle: None }));
+                }
+                else if path_lower.ends_with(&exe_filename.to_lowercase()) {
+                    found_filename = true;
+                    log::info!("Found running process with matching filename: {} (full path: {})", exe_filename, path);
+                }
+            }
+            if !found_filename {
+                log::info!("No running process found with filename: {}", exe_filename);
             } else {
-                log::info!("No running Syncthing process detected for path: {}", exe_path);
+                log::info!("No running process found with full path match: {}", exe_path);
             }
         }
         Ok(None)

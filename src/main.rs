@@ -13,9 +13,18 @@ use config::Config;
 use std::env;
 
 fn main() {
-    // Check for command line argument to only create default config and exit
     let args: Vec<String> = env::args().collect();
-   
+
+    // Parse log level from args or default to Error
+    let mut log_level = LevelFilter::Error;
+    for arg in &args {
+        if let Some(lvl) = arg.strip_prefix("--log-level=") {
+            log_level = logging::log_level_from_str(lvl);
+            break;
+        }
+    }
+    logging::init_logging(log_level, "syncthingers.log");
+
     let config = Config::load_or_create("configuration.json")
         .unwrap_or_else(|e| {
             eprintln!("Error: failed to load or create configuration file: {e}");
@@ -27,16 +36,9 @@ fn main() {
         return;
     }
 
-    // Initialize logging as per config
-    let log_level = match config.log_level.to_lowercase().as_str() {
-        "off" => LevelFilter::Off,
-        "error" => LevelFilter::Error,
-        "warn" => LevelFilter::Warn,
-        "info" => LevelFilter::Info,
-        "debug" => LevelFilter::Debug,
-        _ => LevelFilter::Info,
-    };
-    logging::init_logging(log_level, "syncthingers.log");
+    // Reconfigre logging as per config
+    let config_log_level = logging::log_level_from_str(&config.log_level);
+    logging::set_log_level(config_log_level);
     
     log::info!("Startup arguments: {:?}", config.startup_args);
 

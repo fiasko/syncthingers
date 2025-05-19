@@ -36,6 +36,19 @@ A lightweight, Rust-based singleton system tray application for Windows to manag
    target\release\syncthingers.exe
    ```
 
+## Command-Line Arguments
+
+- `--log-level=<level>`: Set the initial log level for the app. Supported values: `off`, `error`, `warn`, `info`, `debug`. Example: `--log-level=debug`
+- `--create-config`: Only create the default configuration file (if it doesn't exist) and exit. No tray or Syncthing process will be started.
+
+You can combine these arguments as needed. For example:
+
+```
+syncthingers.exe --log-level=debug
+```
+
+This will start the app with debug-level logging.
+
 ## Directory Structure
 ```
 assets/

@@ -46,6 +46,7 @@
 - [x] Handle errors (e.g., executable not found, failed to start)
 - [x] Detect if Syncthing was started by this app
 - [x] Monitor the Syncthing process: if `syncthing.exe` is killed or crashes, update the tray icon state accordingly.
+- [ ] Ensure that stopping Syncthing also terminates all child processes (use Windows Job Objects for process tree termination)
 - [x] When starting `syncthing.exe`, ensure it does not open a terminal window (should be fully background/hidden).
 
 ## System Tray UI

@@ -4,6 +4,7 @@ use std::error::Error;
 use crate::app_state::AppState;
 use crate::error_handling::AppError;
 
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub enum TrayState {
     Running,
     Stopped,
@@ -23,7 +24,7 @@ pub struct TrayUi {
 }
 
 impl TrayUi {
-    pub fn new(app_state: Arc<Mutex<AppState>>) -> Result<Self, Box<dyn Error>> {
+    pub fn new(app_state: Arc<Mutex<AppState>>) -> Result<Arc<Mutex<Self>>, Box<dyn Error>> {
         let tray = TrayItem::new("Syncthingers", tray_item::IconSource::Resource("syncthing_red"))?;
         // Detect running Syncthing process using detect_existing
         let state = {
@@ -35,95 +36,73 @@ impl TrayUi {
                 TrayState::Stopped
             }
         };
-        Ok(Self {
+        let tray_ui = Self {
             tray,
             state,
-            app_state,
-        })
+            app_state: app_state.clone(),
+        };
+        // Spawn a background thread to monitor Syncthing process state and update tray UI
+        let tray_ui_ptr = Arc::new(Mutex::new(tray_ui));
+        let tray_ui_weak = Arc::downgrade(&tray_ui_ptr);
+        let app_state = app_state.clone();
+        std::thread::spawn(move || {
+            let mut last_state = None;
+            loop {
+                let running = {
+                    let mut state = app_state.lock().unwrap();
+                    state.syncthing_running()
+                };
+                let new_state = if running { TrayState::Running } else { TrayState::Stopped };
+                if last_state.as_ref() != Some(&new_state) {
+                    if let Some(tray_ui_arc) = tray_ui_weak.upgrade() {
+                        let mut tray_ui = tray_ui_arc.lock().unwrap();
+                        tray_ui.set_state(new_state);
+                        let _ = tray_ui.recreate_tray_menu();
+                    }
+                    last_state = Some(new_state);
+                }
+                std::thread::sleep(std::time::Duration::from_secs(1));
+            }
+        });
+        Ok(tray_ui_ptr)
     }
 
     pub fn set_state(&mut self, state: TrayState) {
-        match state {
-            TrayState::Running => {
-                let _ = self.tray.set_icon(tray_item::IconSource::Resource("syncthing_green"));
-            }
-            TrayState::Stopped => {
-                let _ = self.tray.set_icon(tray_item::IconSource::Resource("syncthing_red"));
-            }
-        }
         self.state = state;
     }
 
-    pub fn add_menu<F>(&mut self, start_stop: F, open_web: F, open_config: F, exit: F)
-    where
-        F: Fn() + Send + Sync + 'static,
-    {
-        let start_stop_label = match self.state {
-            TrayState::Running => "Stop Syncthing",
-            TrayState::Stopped => "Start Syncthing",
-        };
-        let _ = self.tray.add_menu_item(start_stop_label, start_stop);
-        let _ = self.tray.add_menu_item("Open Syncthing Web UI", open_web);
-        let _ = self.tray.add_menu_item("Open App Configuration", open_config);
-        let _ = self.tray.add_menu_item("Exit", exit);
-    }
-
     pub fn recreate_tray_menu(&mut self) -> Result<(), AppError> {
+        // Workaround: recreate the tray icon and menu from scratch to avoid menu duplication
+        let icon = match self.state {
+            TrayState::Running => tray_item::IconSource::Resource("syncthing_green"),
+            TrayState::Stopped => tray_item::IconSource::Resource("syncthing_red"),
+        };
+        let mut new_tray = TrayItem::new("Syncthingers", icon)
+            .map_err(|e| AppError::TrayUiError(format!("Failed to recreate tray: {e}")))?;
         let app_state = self.app_state.clone();
         let start_stop_label = match self.state {
             TrayState::Running => "Stop Syncthing",
             TrayState::Stopped => "Start Syncthing",
         };
-        let _ = self.tray.add_menu_item(start_stop_label, move || {
+        let _ = new_tray.add_menu_item(start_stop_label, move || {
             let _ = Self::handle_menu_action_static(app_state.clone(), TrayMenuAction::StartStop);
         });
         let app_state = self.app_state.clone();
-        let _ = self.tray.add_menu_item("Open Syncthing Web UI", move || {
+        let _ = new_tray.add_menu_item("Open Syncthing Web UI", move || {
             let _ = Self::handle_menu_action_static(app_state.clone(), TrayMenuAction::OpenWebUI);
         });
         let app_state = self.app_state.clone();
-        let _ = self.tray.add_menu_item("Open Configuration", move || {
+        let _ = new_tray.add_menu_item("Open Configuration", move || {
             let _ = Self::handle_menu_action_static(app_state.clone(), TrayMenuAction::OpenConfig);
         });
         let app_state = self.app_state.clone();
-        let _ = self.tray.add_menu_item("Exit", move || {
+        let _ = new_tray.add_menu_item("Exit", move || {
             let _ = Self::handle_menu_action_static(app_state.clone(), TrayMenuAction::Exit);
         });
+        self.tray = new_tray;
         Ok(())
     }
-
-    pub fn handle_menu_action(&mut self, action: TrayMenuAction) -> Result<(), AppError> {
-        let mut state = self.app_state.lock().unwrap();
-        match action {
-            TrayMenuAction::StartStop => {
-                if state.syncthing_running() {
-                    state.stop_syncthing()?;
-                    drop(state);
-                    let this = self;
-                    this.set_state(TrayState::Stopped);
-                    this.recreate_tray_menu()?;
-                } else {
-                    state.start_syncthing()?;
-                    drop(state);
-                    let this = self;
-                    this.set_state(TrayState::Running);
-                    this.recreate_tray_menu()?;
-                }
-            }
-            TrayMenuAction::OpenWebUI => {
-                opener::open(&state.config.web_ui_url).map_err(|e| AppError::TrayUiError(format!("Failed to open web UI: {}", e)))?;
-            }
-            TrayMenuAction::OpenConfig => {
-                opener::open("configuration.json").map_err(|e| AppError::TrayUiError(format!("Failed to open config: {}", e)))?;
-            }
-            TrayMenuAction::Exit => {
-                state.stop_syncthing().ok();
-                std::process::exit(0);
-            }
-        }
-        Ok(())
-    }
-
+ 
     pub fn setup_tray_menu(&mut self) -> Result<(), AppError> {
         self.recreate_tray_menu()
     }

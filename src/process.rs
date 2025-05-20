@@ -64,9 +64,13 @@ impl SyncthingProcess {
     /// Helper: Enumerate all running processes with the given name and their executable paths (Windows only)
     #[cfg(target_os = "windows")]
     fn enumerate_processes_by_name(process_name: &str) -> io::Result<Vec<(u32, String)>> {
-        let output = Command::new("wmic")
-            .args(["process", "where", &format!("name='{}'", process_name), "get", "ProcessId,ExecutablePath", "/format:csv"])
-            .output()?;
+        let output = {
+            use std::os::windows::process::CommandExt;
+            Command::new("wmic")
+                .args(["process", "where", &format!("name='{}'", process_name), "get", "ProcessId,ExecutablePath", "/format:csv"])
+                .creation_flags(0x08000000) // CREATE_NO_WINDOW
+                .output()?
+        };
         let output_str = String::from_utf8_lossy(&output.stdout);
         let mut result = Vec::new();
         for line in output_str.lines() {

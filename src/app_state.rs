@@ -1,12 +1,9 @@
 use crate::config::Config;
 use crate::process::SyncthingProcess;
-use crate::tray_ui::TrayUi;
-use std::sync::{Arc, Mutex};
 
 pub struct AppState {
     pub config: Config,
     pub syncthing_process: Option<SyncthingProcess>,
-    pub tray_ui: Option<TrayUi>,
 }
 
 impl AppState {
@@ -26,7 +23,6 @@ impl AppState {
         Self {
             config,
             syncthing_process,
-            tray_ui: None,
         }
     }
 
@@ -82,5 +78,3 @@ impl AppState {
         Ok(())
     }
 }
-
-pub type SharedAppState = Arc<Mutex<AppState>>;

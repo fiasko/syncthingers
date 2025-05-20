@@ -52,16 +52,19 @@ fn main() {
     let app_state = std::sync::Arc::new(std::sync::Mutex::new(app_state::AppState::new(config)));
 
     // Create tray UI
-    let mut tray_ui = tray_ui::TrayUi::new(app_state.clone()).unwrap_or_else(|e| {
+    let tray_ui = tray_ui::TrayUi::new(app_state.clone()).unwrap_or_else(|e| {
         log::error!("Failed to create tray UI: {e}");
         error_handling::show_native_error_dialog(&format!("Failed to create tray UI: {e}"), "Syncthingers Error");
         std::process::exit(1);
     });
-    tray_ui.setup_tray_menu().unwrap_or_else(|e| {
-        log::error!("Failed to set up tray menu: {e}");
-        error_handling::show_native_error_dialog(&format!("Failed to set up tray menu: {e}"), "Syncthingers Error");
-        std::process::exit(1);
-    });
+    {
+        let mut tray_ui_guard = tray_ui.lock().unwrap();
+        tray_ui_guard.setup_tray_menu().unwrap_or_else(|e| {
+            log::error!("Failed to set up tray menu: {e}");
+            error_handling::show_native_error_dialog(&format!("Failed to set up tray menu: {e}"), "Syncthingers Error");
+            std::process::exit(1);
+        });
+    }
 
     // Keep the main thread alive so the tray icon stays visible
     log::info!("Tray UI running. Application started.");

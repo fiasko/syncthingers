@@ -11,14 +11,48 @@ pub struct AppState {
 
 impl AppState {
     pub fn new(config: Config) -> Self {
+        // Try to detect and attach to an external Syncthing process
+        let syncthing_process = match SyncthingProcess::detect_external(&config.syncthing_path) {
+            Ok(Some(proc)) => {
+                log::info!("Attached to external Syncthing process.");
+                Some(proc)
+            },
+            Ok(None) => None,
+            Err(e) => {
+                log::warn!("Failed to detect external Syncthing process: {}", e);
+                None
+            }
+        };
         Self {
             config,
-            syncthing_process: None,
+            syncthing_process,
             tray_ui: None,
         }
     }
 
+    /// Attempts to detect and attach to an external Syncthing process, updating state.
+    pub fn detect_and_attach_external(&mut self) -> Result<bool, crate::error_handling::AppError> {
+        match SyncthingProcess::detect_external(&self.config.syncthing_path) {
+            Ok(Some(proc)) => {
+                self.syncthing_process = Some(proc);
+                log::info!("Attached to external Syncthing process.");
+                Ok(true)
+            },
+            Ok(None) => Ok(false),
+            Err(e) => {
+                log::warn!("Failed to detect external Syncthing process: {}", e);
+                Err(crate::error_handling::AppError::ProcessError(format!("Failed to detect external Syncthing: {}", e)))
+            }
+        }
+    }
+
     pub fn syncthing_running(&mut self) -> bool {
+        // Always check for an external process if not running
+        if self.syncthing_process.is_none() {
+            if let Err(e) = self.detect_and_attach_external() {
+                log::warn!("Error during external Syncthing detection: {}", e);
+            }
+        }
         if let Some(proc) = &mut self.syncthing_process {
             proc.is_running()
         } else {

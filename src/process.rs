@@ -61,6 +61,26 @@ impl SyncthingProcess {
         }
     }
 
+    /// Helper: Enumerate all running processes with the given name and their executable paths (Windows only)
+    #[cfg(target_os = "windows")]
+    fn enumerate_processes_by_name(process_name: &str) -> io::Result<Vec<(u32, String)>> {
+        let output = Command::new("wmic")
+            .args(["process", "where", &format!("name='{}'", process_name), "get", "ProcessId,ExecutablePath", "/format:csv"])
+            .output()?;
+        let output_str = String::from_utf8_lossy(&output.stdout);
+        let mut result = Vec::new();
+        for line in output_str.lines() {
+            let parts: Vec<_> = line.split(',').collect();
+            if parts.len() < 3 { continue; }
+            let exe_path = parts[1].trim().to_string();
+            let pid = parts[2].trim().parse::<u32>().ok();
+            if let (Some(pid), exe_path) = (pid, exe_path) {
+                result.push((pid, exe_path));
+            }
+        }
+        Ok(result)
+    }
+
     pub fn stop(&mut self) -> io::Result<()> {
         #[cfg(target_os = "windows")]
         {
@@ -70,6 +90,11 @@ impl SyncthingProcess {
                     CloseHandle(job as winapi::shared::ntdef::HANDLE);
                 }
                 self.job_handle = None;
+            } else if self.child.is_none() && !self.started_by_app {
+                // If this is an external process, kill all syncthing.exe processes
+                for (pid, _exe_path) in Self::enumerate_processes_by_name("syncthing.exe")? {
+                    let _ = Command::new("taskkill").args(["/PID", &pid.to_string(), "/F"]).output();
+                }
             }
         }
         if let Some(child) = &mut self.child {
@@ -90,25 +115,14 @@ impl SyncthingProcess {
     pub fn detect_existing(exe_path: &str) -> io::Result<Option<Self>> {
         #[cfg(target_os = "windows")]
         {
-            use std::process::Command;
             use std::path::Path;
             let exe_filename = Path::new(exe_path)
                 .file_name()
                 .map(|f| f.to_string_lossy().to_string())
                 .unwrap_or_default();
-            // Use wmic to get all processes with ExecutablePath and ProcessId
-            let output = Command::new("wmic")
-                .args(["process", "where", &format!("name='{}'", exe_filename), "get", "ExecutablePath,ProcessId", "/format:csv"])
-                .output()?;
-            let output_str = String::from_utf8_lossy(&output.stdout);
             let exe_path_lower = exe_path.to_lowercase();
             let mut found_filename = false;
-            for line in output_str.lines() {
-                // Each line is CSV: Node,ExecutablePath,ProcessId
-                let parts: Vec<_> = line.split(',').collect();
-                if parts.len() < 3 { continue; }
-                let path = parts[1].trim();
-                if path.is_empty() { continue; }
+            for (_pid, path) in Self::enumerate_processes_by_name(&exe_filename)? {
                 let path_lower = path.to_lowercase();
                 if path_lower == exe_path_lower {
                     log::info!("Detected running Syncthing process with full path match: {}", path);
@@ -123,6 +137,23 @@ impl SyncthingProcess {
                 log::info!("No running process found with filename: {}", exe_filename);
             } else {
                 log::info!("No running process found with full path match: {}", exe_path);
+            }
+        }
+        Ok(None)
+    }
+
+    /// Detects an external Syncthing process (not started by this app) and returns a SyncthingProcess handle if found.
+    pub fn detect_external(exe_path: &str) -> std::io::Result<Option<Self>> {
+        // For now, just use detect_existing, but mark started_by_app as false and child as None
+        #[cfg(target_os = "windows")]
+        {
+            if let Some(mut proc) = Self::detect_existing(exe_path)? {
+                proc.started_by_app = false;
+                proc.child = None; // We can't control the process
+                #[cfg(target_os = "windows")] {
+                    proc.job_handle = None;
+                }
+                return Ok(Some(proc));
             }
         }
         Ok(None)

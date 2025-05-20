@@ -24,7 +24,7 @@ pub struct TrayUi {
 
 impl TrayUi {
     pub fn new(app_state: Arc<Mutex<AppState>>) -> Result<Self, Box<dyn Error>> {
-        let tray = TrayItem::new("Syncthingers", tray_item::IconSource::Resource("syncthing_green"))?;
+        let tray = TrayItem::new("Syncthingers", tray_item::IconSource::Resource("syncthing_red"))?;
         // Detect running Syncthing process using detect_existing
         let state = {
             let state_guard = app_state.lock().unwrap();

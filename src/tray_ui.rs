@@ -91,7 +91,6 @@ impl TrayUi {
     }
 
     pub fn recreate_tray_menu(&mut self) -> Result<(), AppError> {
-        // Workaround: recreate the tray icon and menu from scratch to avoid menu duplication
         let icon = match self.state {
             TrayState::Running => tray_item::IconSource::Resource("syncthing_green"),
             TrayState::Stopped => tray_item::IconSource::Resource("syncthing_red"),

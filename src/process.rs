@@ -13,6 +13,7 @@ use winapi::um::handleapi::CloseHandle;
 pub struct SyncthingProcess {
     child: Option<Child>,
     pub started_by_app: bool,
+    pub syncthing_path: String,
     #[cfg(target_os = "windows")]
     job_handle: Option<usize>, // Use usize for Send/Sync compatibility
 }
@@ -44,6 +45,7 @@ impl SyncthingProcess {
             Ok(Self {
                 child: Some(child),
                 started_by_app: true,
+                syncthing_path: exe_path.to_string(),
                 job_handle: Some(job as usize),
             })
         }
@@ -57,6 +59,7 @@ impl SyncthingProcess {
             Ok(Self {
                 child: Some(child),
                 started_by_app: true,
+                syncthing_path: exe_path.to_string(),
             })
         }
     }
@@ -111,6 +114,13 @@ impl SyncthingProcess {
     pub fn is_running(&mut self) -> bool {
         if let Some(child) = &mut self.child {
             child.try_wait().map(|o| o.is_none()).unwrap_or(false)
+        } else if !self.started_by_app {
+            // External process: use detect_existing with stored path
+            if let Ok(Some(_)) = Self::detect_existing(&self.syncthing_path) {
+                true
+            } else {
+                false
+            }
         } else {
             false
         }
@@ -125,30 +135,21 @@ impl SyncthingProcess {
                 .map(|f| f.to_string_lossy().to_string())
                 .unwrap_or_default();
             let exe_path_lower = exe_path.to_lowercase();
-            let mut found_filename = false;
             for (_pid, path) in Self::enumerate_processes_by_name(&exe_filename)? {
                 let path_lower = path.to_lowercase();
                 if path_lower == exe_path_lower {
-                    log::info!("Detected running Syncthing process with full path match: {}", path);
-                    return Ok(Some(Self { child: None, started_by_app: false, job_handle: None }));
+                    // Full path match
+                    return Ok(Some(Self { child: None, started_by_app: false, syncthing_path: exe_path.to_string(), job_handle: None }));
                 }
-                else if path_lower.ends_with(&exe_filename.to_lowercase()) {
-                    found_filename = true;
-                    log::info!("Found running process with matching filename: {} (full path: {})", exe_filename, path);
-                }
+                // else: filename match only, but we do not use it here
             }
-            if !found_filename {
-                log::info!("No running process found with filename: {}", exe_filename);
-            } else {
-                log::info!("No running process found with full path match: {}", exe_path);
-            }
+            // No process found with full path match
         }
         Ok(None)
     }
 
     /// Detects an external Syncthing process (not started by this app) and returns a SyncthingProcess handle if found.
     pub fn detect_external(exe_path: &str) -> std::io::Result<Option<Self>> {
-        // For now, just use detect_existing, but mark started_by_app as false and child as None
         #[cfg(target_os = "windows")]
         {
             if let Some(mut proc) = Self::detect_existing(exe_path)? {

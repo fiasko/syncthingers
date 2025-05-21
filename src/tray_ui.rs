@@ -10,6 +10,7 @@ pub enum TrayState {
     Stopped,
 }
 
+#[derive(Debug)]
 pub enum TrayMenuAction {
     StartStop,
     OpenWebUI,
@@ -52,8 +53,26 @@ impl TrayUi {
                     let mut state = app_state.lock().unwrap();
                     state.syncthing_running()
                 };
-                let new_state = if running { TrayState::Running } else { TrayState::Stopped };
+                // Determine process state: external, started by app, or not running
+                let (new_state, process_origin) = {
+                    let mut state = app_state.lock().unwrap();
+                    if let Some(proc) = &mut state.syncthing_process {
+                        if proc.started_by_app {
+                            (TrayState::Running, "started by app")
+                        } else {
+                            (TrayState::Running, "external")
+                        }
+                    } else {
+                        (TrayState::Stopped, "not running")
+                    }
+                };
                 if last_state.as_ref() != Some(&new_state) {
+                    match process_origin {
+                        "started by app" => log::info!("Syncthing process state: running (started by this app)"),
+                        "external" => log::info!("Syncthing process state: running (external)"),
+                        "not running" => log::info!("Syncthing process state: not running"),
+                        _ => {}
+                    }
                     if let Some(tray_ui_arc) = tray_ui_weak.upgrade() {
                         let mut tray_ui = tray_ui_arc.lock().unwrap();
                         tray_ui.set_state(new_state);
@@ -108,6 +127,7 @@ impl TrayUi {
     }
 
     pub fn handle_menu_action_static(app_state: Arc<Mutex<AppState>>, action: TrayMenuAction) -> Result<(), AppError> {
+        log::info!("Tray menu action: {:?}", action);
         let mut state = app_state.lock().unwrap();
         match action {
             TrayMenuAction::StartStop => {

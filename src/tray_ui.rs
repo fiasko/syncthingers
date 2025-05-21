@@ -62,13 +62,13 @@ impl TrayUi {
         
         Ok(tray_ui_ptr)
     }
-
+    
     /// Detects the initial state of Syncthing (running or stopped).
     fn detect_initial_state(app_state: &Arc<Mutex<AppState>>) -> Result<TrayState, Box<dyn Error>> {
         let state_guard = app_state.lock().map_err(|_| "Failed to lock app state")?;
         let exe_path = &state_guard.config.syncthing_path;
         
-        match crate::process::SyncthingProcess::detect_existing(exe_path) {
+        match crate::process::SyncthingProcess::detect_process(exe_path, false) {
             Ok(Some(_)) => Ok(TrayState::Running),
             _ => Ok(TrayState::Stopped),
         }
@@ -218,16 +218,15 @@ impl TrayUi {
         
         match app_state.lock() {
             Ok(mut state) => Self::process_menu_action(&mut state, action),
-            Err(_) => Err(AppError::TrayUiError("Failed to lock app state".to_string())),
-        }
+            Err(_) => Err(AppError::TrayUiError("Failed to lock app state".to_string())),        }
     }
-      /// Processes a menu action with the given application state.
+    
+    /// Processes a menu action with the given application state.
     fn process_menu_action(state: &mut AppState, action: TrayMenuAction) -> Result<(), AppError> {
         match action {
             TrayMenuAction::StartStop => {
                 if state.syncthing_running() {
-                    state.stop_syncthing()?;
-                } else {
+                    state.stop_syncthing()?;                } else {
                     state.start_syncthing()?;
                 }
             },
@@ -236,8 +235,38 @@ impl TrayUi {
                     .map_err(|e| AppError::TrayUiError(format!("Failed to open web UI: {}", e)))?;
             },
             TrayMenuAction::OpenConfig => {
-                opener::open("configuration.json")
-                    .map_err(|e| AppError::TrayUiError(format!("Failed to open config: {}", e)))?;
+                // Get current directory
+                let current_dir = std::env::current_dir()
+                    .map_err(|e| AppError::TrayUiError(format!("Failed to get current directory: {}", e)))?;
+                
+                // Build path to the config file
+                let config_path = current_dir.join("configuration.json");
+                
+                if config_path.exists() {
+                    // Log the path for debugging purposes
+                    log::info!("Opening configuration file at: {}", config_path.display());
+                    
+                    // Use the existing Config::open_in_editor function
+                    crate::config::Config::open_in_editor(&config_path)
+                        .map_err(|e| AppError::TrayUiError(format!("Failed to open config file: {}", e)))?;
+                } else {
+                    // If not found in current dir, try executable directory as fallback
+                    if let Ok(exe_path) = std::env::current_exe() {
+                        if let Some(exe_dir) = exe_path.parent() {
+                            let exe_config_path = exe_dir.join("configuration.json");
+                            
+                            if exe_config_path.exists() {
+                                log::info!("Opening configuration file at: {}", exe_config_path.display());
+                                crate::config::Config::open_in_editor(&exe_config_path)
+                                    .map_err(|e| AppError::TrayUiError(format!("Failed to open config file: {}", e)))?;
+                                return Ok(());
+                            }
+                        }
+                    }
+                    
+                    // If we got here, we couldn't find the config file
+                    return Err(AppError::TrayUiError("Configuration file not found".to_string()));
+                }
             },
             TrayMenuAction::Exit => {
                 // Attempt to stop Syncthing gracefully before exiting
@@ -253,8 +282,8 @@ impl TrayUi {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::config::Config;
-      // Helper for creating test config
+    use crate::config::Config;    
+    // Helper for creating test config
     fn create_test_config() -> Config {
         Config {
             log_level: "info".to_string(),
@@ -274,8 +303,8 @@ mod tests {
         // In a real test with mocks, we'd control the process detection result
         let state = TrayUi::detect_initial_state(&app_state);
         assert!(state.is_ok(), "Initial state detection should succeed");
-    }
-      #[test]
+    }    
+    #[test]
     fn test_process_menu_action_exit() {
         // This test would need to mock std::process::exit for full testing
         // Here we're just validating the API structure
@@ -288,8 +317,8 @@ mod tests {
         
         // Just a placeholder assertion to make the test pass
         assert!(true);
-    }
-      #[test]
+    }    
+    #[test]
     fn test_get_current_process_state() {
         let config = create_test_config();
         let app_state = Arc::new(Mutex::new(AppState::new(config)));

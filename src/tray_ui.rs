@@ -75,10 +75,8 @@ impl TrayUi {
     }
 
     /// Starts a background thread to monitor Syncthing process state and update tray UI.
-    fn start_monitoring_thread(
-        tray_ui_ptr: Arc<Mutex<Self>>, 
-        app_state: Arc<Mutex<AppState>>
-    ) -> Result<(), Box<dyn Error>> {
+    fn start_monitoring_thread(tray_ui_ptr: Arc<Mutex<Self>>, app_state: Arc<Mutex<AppState>>
+        ) -> Result<(), Box<dyn Error>> {
         // Create a weak reference to avoid circular references
         let tray_ui_weak = Arc::downgrade(&tray_ui_ptr);
         
@@ -226,7 +224,8 @@ impl TrayUi {
         match action {
             TrayMenuAction::StartStop => {
                 if state.syncthing_running() {
-                    state.stop_syncthing()?;                } else {
+                    state.stop_syncthing()?;
+                } else {
                     state.start_syncthing()?;
                 }
             },

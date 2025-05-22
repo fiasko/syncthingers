@@ -65,12 +65,13 @@ impl TrayUi {
     
     /// Detects the initial state of Syncthing (running or stopped).
     fn detect_initial_state(app_state: &Arc<Mutex<AppState>>) -> Result<TrayState, Box<dyn Error>> {
-        let state_guard = app_state.lock().map_err(|_| "Failed to lock app state")?;
-        let exe_path = &state_guard.config.syncthing_path;
-        
-        match crate::process::SyncthingProcess::detect_process(exe_path, false) {
-            Ok(Some(_)) => Ok(TrayState::Running),
-            _ => Ok(TrayState::Stopped),
+        let mut state_guard = app_state.lock().map_err(|_| "Failed to lock app state")?;
+
+        if state_guard.syncthing_running() {
+            return Ok(TrayState::Running);
+        }
+        else {
+            return Ok(TrayState::Stopped);
         }
     }
 
@@ -266,10 +267,11 @@ impl TrayUi {
                     // If we got here, we couldn't find the config file
                     return Err(AppError::TrayUiError("Configuration file not found".to_string()));
                 }
-            },
-            TrayMenuAction::Exit => {
-                // Attempt to stop Syncthing gracefully before exiting
-                let _ = state.stop_syncthing();
+            },            TrayMenuAction::Exit => {
+                // Handle process closure based on configuration
+                if let Err(e) = state.handle_exit_closure() {
+                    log::warn!("Error during exit closure: {}", e);
+                }
                 std::process::exit(0);
             },
         }
@@ -281,14 +283,14 @@ impl TrayUi {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::config::Config;    
-    // Helper for creating test config
+    use crate::config::Config;      // Helper for creating test config
     fn create_test_config() -> Config {
         Config {
             log_level: "info".to_string(),
             syncthing_path: "syncthing.exe".to_string(),
             web_ui_url: "http://localhost:8384".to_string(),
             startup_args: vec![],
+            process_closure_behavior: crate::config::ProcessClosureBehavior::default(),
         }
     }
     

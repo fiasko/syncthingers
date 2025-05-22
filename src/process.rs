@@ -149,6 +149,9 @@ impl SyncthingProcess {
     pub fn stop(&mut self) -> io::Result<()> {
         #[cfg(target_os = "windows")]
         {
+            // Define CREATE_NO_WINDOW constant for this method
+            const CREATE_NO_WINDOW: u32 = 0x08000000;
+            
             if let Some(job) = self.job_handle {
                 // For processes we created with a job object
                 unsafe {
@@ -171,6 +174,7 @@ impl SyncthingProcess {
                         log::info!("Terminating external Syncthing process (PID: {})", pid);
                         let _ = Command::new("taskkill")
                             .args(["/PID", &pid.to_string(), "/F"])
+                            .creation_flags(CREATE_NO_WINDOW)
                             .output();
                     }
                 }
@@ -214,7 +218,8 @@ impl SyncthingProcess {
             },
             
             // Other cases (no child and started_by_app=true shouldn't happen)
-            _ => false,        }
+            _ => false,
+        }
     }
     
     /// Detects a Syncthing process with the given executable path.
@@ -273,22 +278,8 @@ impl SyncthingProcess {
         
         Ok(None)
     }
-      /// DEPRECATED: Use detect_process(exe_path, false) instead
-    /// 
-    /// Detects if a Syncthing process with the given executable path is already running.
-    #[allow(dead_code)]
-    pub fn detect_existing(exe_path: &str) -> io::Result<Option<Self>> {
-        Self::detect_process(exe_path, false)
-    }
-
-    /// DEPRECATED: Use detect_process(exe_path, true) instead
-    /// 
-    /// Detects an external Syncthing process (not started by this app).
-    #[allow(dead_code)]
-    pub fn detect_external(exe_path: &str) -> io::Result<Option<Self>> {
-        Self::detect_process(exe_path, true)
-    }
-      #[cfg(test)]
+    
+    #[cfg(test)]
     /// Returns a mock Syncthing process for testing.
     /// 
     /// This method is only available in test builds.

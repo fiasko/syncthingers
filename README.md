@@ -6,7 +6,7 @@ A lightweight, Rust-based singleton system tray application for Windows to manag
 - **Singleton enforcement:** Only one instance can run at a time.
 - **System tray UI:** Start/stop Syncthing, monitor status, open web UI, and access configuration from the tray.
 - **Process management:** Start, stop, and monitor Syncthing, with detection of externally started instances.
-- **Configurable:** Settings (log level, Syncthing path, web UI URL, startup args) in `configuration.json`.
+- **Configurable:** Settings (log level, Syncthing path, web UI URL, startup args) in `configuration.json`. Automatically updates configuration files when new options are added.
 - **Logging:** Log key events and errors to a file.
 - **Robust error handling:** User feedback via logs and native dialogs for critical errors.
 - **Windows-specific:** Uses `.ico` tray icons and embeds version info for distribution.
@@ -59,14 +59,26 @@ syncthingers.log   # Log file
 ```
 
 ## Configuration Example
-```
+```json
 {
   "log_level": "info",
   "syncthing_path": "C:/Program Files/Syncthing/syncthing.exe",
   "web_ui_url": "http://localhost:8384",
-  "startup_args": ["-no-browser"]
+  "startup_args": ["-no-browser"],
+  "process_closure_behavior": "close_managed"
 }
 ```
+
+### Configuration Options
+
+- **log_level**: Set the logging level (`off`, `error`, `warn`, `info`, `debug`)
+- **syncthing_path**: Full path to the Syncthing executable
+- **web_ui_url**: URL for the Syncthing web interface
+- **startup_args**: Command line arguments passed to Syncthing when starting
+- **process_closure_behavior**: Controls what happens to Syncthing processes when the app exits:
+  - `"close_all"`: Closes all Syncthing processes (both managed and external)
+  - `"close_managed"`: Only closes processes started by this app (default)
+  - `"dont_close"`: Leaves all Syncthing processes running
 
 ## Development
 - See `TODO.md` for a step-by-step plan and best practices.

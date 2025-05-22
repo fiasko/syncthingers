@@ -2,7 +2,7 @@
 
 mod singleton;
 mod logging;
-mod config;
+pub mod config;
 mod process;
 mod tray_ui;
 mod app_state;

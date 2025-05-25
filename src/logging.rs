@@ -1,4 +1,4 @@
-use simplelog::{Config as LogConfig, LevelFilter, WriteLogger};
+use simplelog::{Config as LogConfig, LevelFilter, WriteLogger, ConfigBuilder};
 use std::fs::File;
 use std::path::Path;
 
@@ -21,8 +21,12 @@ pub fn init_logging(log_level: LevelFilter, log_path: impl AsRef<Path>) {
             return;
         }
     };
+
+     let config = ConfigBuilder::new()
+        .set_location_level(LevelFilter::Info)
+        .build();
     
-    if let Err(e) = WriteLogger::init(log_level, LogConfig::default(), log_file) {
+    if let Err(e) = WriteLogger::init(log_level, config, log_file) {
         eprintln!("Failed to initialize logger: {}", e);
     }
     

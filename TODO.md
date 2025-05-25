@@ -48,7 +48,9 @@
 - [x] Store process handle for management
 - [x] Handle errors (e.g., executable not found, failed to start)
 - [x] Detect if Syncthing was started by this app
-- [x] Monitor the Syncthing process: if `syncthing.exe` is killed or crashes, update the tray icon state accordingly.
+- [ ] Monitor the Syncthing process: if `syncthing.exe` is killed or crashes, update the tray icon state accordingly.
+ - [ ] Make good event based monitoring system for waiting external syncthing start and stop events.
+  - [ ] remove the process polling system
 - [x] Ensure that stopping Syncthing also terminates all child processes (use Windows Job Objects for process tree termination)
 - [x] When starting `syncthing.exe`, ensure it does not open a terminal window (should be fully background/hidden).
 - [x] Fix issue with command windows appearing when terminating external processes (CREATE_NO_WINDOW flag)

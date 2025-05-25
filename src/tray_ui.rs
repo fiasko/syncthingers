@@ -233,30 +233,36 @@ impl TrayUi {
             TrayMenuAction::OpenWebUI => {
                 opener::open(&state.config.web_ui_url)
                     .map_err(|e| AppError::TrayUiError(format!("Failed to open web UI: {}", e)))?;
-            },
-            TrayMenuAction::OpenConfig => {
-                // Get current directory
-                let current_dir = std::env::current_dir()
-                    .map_err(|e| AppError::TrayUiError(format!("Failed to get current directory: {}", e)))?;
+            },            TrayMenuAction::OpenConfig => {
+                // Get the proper configuration file path
+                let config_path = crate::app_dirs::get_config_file_path(None)
+                    .ok_or_else(|| AppError::TrayUiError("Could not determine config file path".to_string()))?;
                 
-                // Build path to the config file
-                let config_path = current_dir.join("configuration.json");
+                log::info!("Opening configuration file at: {}", config_path.display());
                 
-                if config_path.exists() {
-                    // Log the path for debugging purposes
-                    log::info!("Opening configuration file at: {}", config_path.display());
+                // Check if it exists
+                if !config_path.exists() {
+                    log::warn!("Configuration file does not exist at {}", config_path.display());
                     
-                    // Use the existing Config::open_in_editor function
-                    crate::config::Config::open_in_editor(&config_path)
-                        .map_err(|e| AppError::TrayUiError(format!("Failed to open config file: {}", e)))?;
-                } else {
-                    // If not found in current dir, try executable directory as fallback
+                    // Try fallback locations - current directory
+                    let current_dir = std::env::current_dir()
+                        .map_err(|e| AppError::TrayUiError(format!("Failed to get current directory: {}", e)))?;
+                    
+                    let current_dir_config = current_dir.join("configuration.json");
+                    if current_dir_config.exists() {
+                        log::info!("Using fallback config at: {}", current_dir_config.display());
+                        crate::config::Config::open_in_editor(&current_dir_config)
+                            .map_err(|e| AppError::TrayUiError(format!("Failed to open config file: {}", e)))?;
+                        return Ok(());
+                    }
+                    
+                    // Try executable directory as another fallback
                     if let Ok(exe_path) = std::env::current_exe() {
                         if let Some(exe_dir) = exe_path.parent() {
                             let exe_config_path = exe_dir.join("configuration.json");
                             
                             if exe_config_path.exists() {
-                                log::info!("Opening configuration file at: {}", exe_config_path.display());
+                                log::info!("Using fallback config at: {}", exe_config_path.display());
                                 crate::config::Config::open_in_editor(&exe_config_path)
                                     .map_err(|e| AppError::TrayUiError(format!("Failed to open config file: {}", e)))?;
                                 return Ok(());
@@ -264,9 +270,13 @@ impl TrayUi {
                         }
                     }
                     
-                    // If we got here, we couldn't find the config file
+                    // If we got here, we couldn't find any config file
                     return Err(AppError::TrayUiError("Configuration file not found".to_string()));
                 }
+                
+                // Open the configuration file
+                crate::config::Config::open_in_editor(&config_path)
+                    .map_err(|e| AppError::TrayUiError(format!("Failed to open config file: {}", e)))?;
             },            TrayMenuAction::Exit => {
                 // Handle process closure based on configuration
                 if let Err(e) = state.handle_exit_closure() {

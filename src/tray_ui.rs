@@ -33,14 +33,6 @@ pub struct TrayUi {
 
 impl TrayUi {
     /// Creates a new TrayUi instance with the given application state.
-    ///
-    /// # Arguments
-    ///
-    /// * `app_state` - Shared application state reference
-    ///
-    /// # Returns
-    ///
-    /// Arc<Mutex<TrayUi>> wrapped in Result for thread-safe access
     pub fn new(app_state: Arc<Mutex<AppState>>) -> Result<Arc<Mutex<Self>>, Box<dyn Error>> {
         // Initialize tray with initial icon state
         let tray = TrayItem::new("Syncthingers", tray_item::IconSource::Resource("syncthing_red"))?;
@@ -77,7 +69,7 @@ impl TrayUi {
 
     /// Starts a background thread to monitor Syncthing process state and update tray UI.
     fn start_monitoring_thread(tray_ui_ptr: Arc<Mutex<Self>>, app_state: Arc<Mutex<AppState>>
-        ) -> Result<(), Box<dyn Error>> {
+    ) -> Result<(), Box<dyn Error>> {
         // Create a weak reference to avoid circular references
         let tray_ui_weak = Arc::downgrade(&tray_ui_ptr);
         
@@ -188,11 +180,7 @@ impl TrayUi {
     }
     
     /// Helper to add an individual menu item with appropriate callback.
-    fn add_menu_item(
-        &self,
-        tray: &mut TrayItem,
-        label: &str,
-        action: TrayMenuAction
+    fn add_menu_item(&self, tray: &mut TrayItem, label: &str, action: TrayMenuAction
     ) -> Result<(), AppError> {
         let app_state = self.app_state.clone();
         let action_clone = action;
@@ -209,9 +197,7 @@ impl TrayUi {
     }
 
     /// Static handler for menu actions.
-    pub fn handle_menu_action_static(
-        app_state: Arc<Mutex<AppState>>,
-        action: TrayMenuAction
+    pub fn handle_menu_action_static(app_state: Arc<Mutex<AppState>>, action: TrayMenuAction
     ) -> Result<(), AppError> {
         info!("Tray menu action: {:?}", action);
         
@@ -233,7 +219,8 @@ impl TrayUi {
             TrayMenuAction::OpenWebUI => {
                 opener::open(&state.config.web_ui_url)
                     .map_err(|e| AppError::TrayUiError(format!("Failed to open web UI: {}", e)))?;
-            },            TrayMenuAction::OpenConfig => {
+            },
+            TrayMenuAction::OpenConfig => {
                 // Get the proper configuration file path
                 let config_path = crate::app_dirs::get_config_file_path(None)
                     .ok_or_else(|| AppError::TrayUiError("Could not determine config file path".to_string()))?;
@@ -277,7 +264,8 @@ impl TrayUi {
                 // Open the configuration file
                 crate::config::Config::open_in_editor(&config_path)
                     .map_err(|e| AppError::TrayUiError(format!("Failed to open config file: {}", e)))?;
-            },            TrayMenuAction::Exit => {
+            },
+            TrayMenuAction::Exit => {
                 // Handle process closure based on configuration
                 if let Err(e) = state.handle_exit_closure() {
                     log::warn!("Error during exit closure: {}", e);

@@ -44,7 +44,7 @@ fn main() {
     let config_file_path = app_dirs::get_config_file_path(config_path_override.as_deref())
         .unwrap_or_else(|| std::path::PathBuf::from("configuration.json"));
     
-    log::info!("Using configuration file: {}", config_file_path.display());
+    log::debug!("Using configuration file: {}", config_file_path.display());
     
     let config = Config::load_or_create(config_file_path)
         .unwrap_or_else(|e| {
@@ -67,6 +67,7 @@ fn main() {
         log::warn!("Another instance of the application is already running. Exiting.");
         return;
     }
+    
     log::info!("Application starting");
     
     // Create shared app state

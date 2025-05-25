@@ -2,6 +2,7 @@
 name = "syncthingers"
 version = "0.5.0"
 edition = "2024"
+authors = ["Asko Eronen"]
 
 [dependencies]
 log = "0.4.27"

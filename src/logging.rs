@@ -22,9 +22,12 @@ pub fn init_logging(log_level: LevelFilter, log_path: impl AsRef<Path>) {
         }
     };
 
-     let config = ConfigBuilder::new()
-        .set_location_level(LevelFilter::Info)
-        .build();
+    let config = match log_level {
+        LevelFilter::Debug => ConfigBuilder::new()
+        .set_target_level(LevelFilter::Info)
+        .build(),
+        _ => LogConfig::default(),
+    };
     
     if let Err(e) = WriteLogger::init(log_level, config, log_file) {
         eprintln!("Failed to initialize logger: {}", e);

@@ -72,7 +72,7 @@ impl Config {
                   
             // Check if any fields are missing in the JSON
             if Self::check_missing_fields(&json_value) {
-                log::info!("Configuration is missing fields - updating with defaults");
+                log::debug!("Configuration is missing fields - updating with defaults");
                 
                 // Create default config
                 let default_config = Self::default();
@@ -81,7 +81,7 @@ impl Config {
                 let merged = Self::merge_with_defaults(json_value, &default_config)?;
                 
                 // Write the updated config back to the file
-                log::info!("Updating config file with missing fields");
+                log::debug!("Updating config file with missing fields");
                 let updated_data = serde_json::to_string_pretty(&merged).unwrap();
                 let mut file = fs::File::create(&path)?;
                 file.write_all(updated_data.as_bytes())?;
@@ -137,7 +137,9 @@ impl Config {
             .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
             
         Ok(config)
-    }    /// Checks if the JSON object is missing any fields that are present in the Config struct.
+    }
+    
+    /// Checks if the JSON object is missing any fields that are present in the Config struct.
     /// Returns true if any fields are missing.
     fn check_missing_fields(json_value: &serde_json::Value) -> bool {
         // Check for specific fields we know might be missing

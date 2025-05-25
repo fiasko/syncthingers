@@ -1,25 +1,13 @@
 use crate::config::Config;
 use crate::process::SyncthingProcess;
 
-/// Represents the application state for Syncthingers.
-/// 
-/// This struct manages the Syncthing process and configuration,
-/// handling both processes started by the app and external processes.
+/// Syncthingers application state.
 pub struct AppState {
-    /// The application configuration
     pub config: Config,
-    /// The current Syncthing process being managed, if any
     pub syncthing_process: Option<SyncthingProcess>,
 }
 
 impl AppState {
-    /// Creates a new AppState with the given configuration.
-    /// 
-    /// This will attempt to detect and attach to any existing external Syncthing process.
-    /// 
-    /// # Arguments
-    /// 
-    /// * `config` - The application configuration
     pub fn new(config: Config) -> Self {
         // Try to detect and attach to an external Syncthing process
         let syncthing_process = match SyncthingProcess::detect_process(&config.syncthing_path, true) {
@@ -55,12 +43,6 @@ impl AppState {
     }
     
     /// Checks if Syncthing is currently running.
-    /// 
-    /// If no process is currently tracked, this will attempt to detect an external process first.
-    /// 
-    /// # Returns
-    /// 
-    /// `true` if Syncthing is running, `false` otherwise
     pub fn syncthing_running(&mut self) -> bool {
         // Always check for an external process if not running
         if self.syncthing_process.is_none() {
@@ -76,10 +58,6 @@ impl AppState {
     }
     
     /// Starts the Syncthing process if it's not already running.
-    /// 
-    /// # Returns
-    /// 
-    /// A Result indicating success or containing an error if the process couldn't be started
     pub fn start_syncthing(&mut self) -> Result<(), crate::error_handling::AppError> {
         if self.syncthing_running() {
             return Ok(());
@@ -91,11 +69,9 @@ impl AppState {
         self.syncthing_process = Some(proc);
         log::info!("Syncthing process started successfully.");
         Ok(())
-    }    /// Stops the Syncthing process if it's running.
-    /// 
-    /// # Returns
-    /// 
-    /// A Result indicating success or containing an error if the process couldn't be stopped
+    }
+    
+    /// Stops the Syncthing process if it's running.
     pub fn stop_syncthing(&mut self) -> Result<(), crate::error_handling::AppError> {
         if let Some(proc) = &mut self.syncthing_process {
             proc.stop().map_err(|e| crate::error_handling::AppError::ProcessError(format!("Failed to stop Syncthing: {}", e)))?;
@@ -111,10 +87,6 @@ impl AppState {
     /// - CloseAll: Stops both managed and external Syncthing processes
     /// - CloseManaged: Only stops processes started by this app
     /// - DontClose: Leaves all processes running
-    /// 
-    /// # Returns
-    /// 
-    /// A Result indicating success or containing an error if processes couldn't be handled
     pub fn handle_exit_closure(&mut self) -> Result<(), crate::error_handling::AppError> {
         match self.config.process_closure_behavior {
             crate::config::ProcessClosureBehavior::CloseAll => {

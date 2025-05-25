@@ -26,15 +26,6 @@ pub struct SyncthingProcess {
 
 impl SyncthingProcess {
     /// Starts a new Syncthing process.
-    ///
-    /// # Arguments
-    ///
-    /// * `exe_path` - Path to the Syncthing executable
-    /// * `args` - Command line arguments for Syncthing
-    ///
-    /// # Returns
-    ///
-    /// A Result containing either a new SyncthingProcess or an IO error
     pub fn start(exe_path: &str, args: &[String]) -> io::Result<Self> {
         #[cfg(target_os = "windows")]
         {
@@ -90,16 +81,6 @@ impl SyncthingProcess {
     }
 
     /// Enumerates all running processes with the given name and returns their PIDs and executable paths.
-    /// 
-    /// This is a Windows-only function that uses WMIC to query the system for processes.
-    ///
-    /// # Arguments
-    ///
-    /// * `process_name` - The name of the process to search for (e.g., "syncthing.exe")
-    ///
-    /// # Returns
-    ///
-    /// A Result containing a vector of (PID, ExecutablePath) pairs or an IO error
     #[cfg(target_os = "windows")]
     fn enumerate_processes_by_name(process_name: &str) -> io::Result<Vec<(u32, String)>> {
         const CREATE_NO_WINDOW: u32 = 0x08000000;
@@ -139,13 +120,6 @@ impl SyncthingProcess {
     }
 
     /// Stops the Syncthing process.
-    ///
-    /// For processes started by the app, this terminates the job object (Windows)
-    /// or kills the child process directly. For external processes, it uses taskkill.
-    ///
-    /// # Returns
-    ///
-    /// A Result indicating success or containing an IO error
     pub fn stop(&mut self) -> io::Result<()> {
         #[cfg(target_os = "windows")]
         {
@@ -190,13 +164,6 @@ impl SyncthingProcess {
     }
     
     /// Checks if the Syncthing process is currently running.
-    ///
-    /// For processes started by the app, it checks the child process status.
-    /// For external processes, it tries to detect if they're still running.
-    ///
-    /// # Returns
-    ///
-    /// `true` if the process is running, `false` otherwise
     pub fn is_running(&mut self) -> bool {
         match (&mut self.child, self.started_by_app) {
             // Child process started by us
@@ -223,19 +190,6 @@ impl SyncthingProcess {
     }
     
     /// Detects a Syncthing process with the given executable path.
-    ///
-    /// This function searches for any running Syncthing process that matches
-    /// the provided executable path. It can detect both processes started by this app
-    /// and external processes.
-    ///
-    /// # Arguments
-    ///
-    /// * `exe_path` - The full path to the Syncthing executable
-    /// * `external_only` - If true, only mark the process as external (not started by app)
-    ///
-    /// # Returns
-    ///
-    /// A Result containing either Some(SyncthingProcess) if found, or None if not found
     pub fn detect_process(exe_path: &str, external_only: bool) -> io::Result<Option<Self>> {
         #[cfg(target_os = "windows")]
         {

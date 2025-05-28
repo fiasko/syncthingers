@@ -1,17 +1,17 @@
+use log::{debug, error, info};
 use std::io;
 use std::ptr;
 use std::sync::Weak;
-use log::{debug, info, error};
 
 use crate::app_state::AppState;
 use std::sync::Mutex;
 
 #[cfg(target_os = "windows")]
-use winapi::um::winnt::{HANDLE, WT_EXECUTEONLYONCE};
-#[cfg(target_os = "windows")]
-use winapi::um::winbase::{RegisterWaitForSingleObject, UnregisterWait, INFINITE};
-#[cfg(target_os = "windows")]
 use winapi::shared::minwindef::LPVOID;
+#[cfg(target_os = "windows")]
+use winapi::um::winbase::{INFINITE, RegisterWaitForSingleObject, UnregisterWait};
+#[cfg(target_os = "windows")]
+use winapi::um::winnt::{HANDLE, WT_EXECUTEONLYONCE};
 
 /// Events related to process lifecycle
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -51,17 +51,14 @@ pub fn register_process_exit_monitor(
     pid: u32,
 ) -> io::Result<ProcessMonitorHandle> {
     debug!("Registering process exit monitor for PID {}", pid);
-    
+
     let mut wait_handle: HANDLE = ptr::null_mut();
-    
+
     // Box the context we need to pass to the callback
-    let context = Box::new(ProcessExitContext {
-        app_state,
-        pid,
-    });
-    
+    let context = Box::new(ProcessExitContext { app_state, pid });
+
     let context_ptr = Box::into_raw(context);
-    
+
     let result = unsafe {
         RegisterWaitForSingleObject(
             &mut wait_handle,
@@ -72,7 +69,7 @@ pub fn register_process_exit_monitor(
             WT_EXECUTEONLYONCE,
         )
     };
-    
+
     if result == 0 {
         // Clean up on error
         unsafe {
@@ -80,10 +77,8 @@ pub fn register_process_exit_monitor(
         }
         return Err(io::Error::last_os_error());
     }
-    
-    Ok(ProcessMonitorHandle {
-        wait_handle,
-    })
+
+    Ok(ProcessMonitorHandle { wait_handle })
 }
 
 #[cfg(target_os = "windows")]
@@ -97,7 +92,7 @@ unsafe extern "system" fn process_exit_callback(context: LPVOID, _timed_out: u8)
     unsafe {
         let context = Box::from_raw(context as *mut ProcessExitContext);
         info!("Process exit detected for PID {}", context.pid);
-        
+
         // Update app state
         if let Some(app_state) = context.app_state.upgrade() {
             if let Ok(mut state) = app_state.lock() {

@@ -1,6 +1,6 @@
 use std::fs;
 use std::io;
-use std::path::{PathBuf};
+use std::path::PathBuf;
 
 /// Struct to manage application directories and paths in a stateful way.
 #[derive(Clone)]
@@ -48,8 +48,6 @@ impl AppDirs {
     pub fn log_file_path(&self) -> PathBuf {
         self.base_dir.join("syncthingers.log")
     }
-
-
 }
 
 #[cfg(test)]

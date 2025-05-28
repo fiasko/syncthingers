@@ -1,10 +1,10 @@
-use simplelog::{Config as LogConfig, LevelFilter, WriteLogger, ConfigBuilder};
+use simplelog::{Config as LogConfig, ConfigBuilder, LevelFilter, WriteLogger};
 use std::fs::File;
 use std::path::Path;
 
 pub fn init_logging(log_level: LevelFilter, log_path: impl AsRef<Path>) {
     let path = log_path.as_ref();
-    
+
     // Ensure parent directory exists
     if let Some(parent) = path.parent() {
         if !parent.exists() {
@@ -13,7 +13,7 @@ pub fn init_logging(log_level: LevelFilter, log_path: impl AsRef<Path>) {
             }
         }
     }
-    
+
     let log_file = match File::create(path) {
         Ok(file) => file,
         Err(e) => {
@@ -24,17 +24,20 @@ pub fn init_logging(log_level: LevelFilter, log_path: impl AsRef<Path>) {
 
     let config = match log_level {
         LevelFilter::Debug => ConfigBuilder::new()
-        .set_target_level(LevelFilter::Info)
-        .build(),
+            .set_target_level(LevelFilter::Info)
+            .build(),
         _ => LogConfig::default(),
     };
-    
+
     if let Err(e) = WriteLogger::init(log_level, config, log_file) {
         eprintln!("Failed to initialize logger: {}", e);
     }
-    
-    log::info!("Logging initialized at level {} to file: {}", 
-              log_level, path.display());
+
+    log::info!(
+        "Logging initialized at level {} to file: {}",
+        log_level,
+        path.display()
+    );
 }
 
 pub fn set_log_level(level: LevelFilter) {

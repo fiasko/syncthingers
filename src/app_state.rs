@@ -277,6 +277,22 @@ impl AppState {
             }
         }
     }
+
+    /// Checks and auto-starts Syncthing if needed based on configuration.
+    pub fn check_and_autostart_syncthing(&mut self) -> Result<(), crate::error_handling::AppError> {
+        if self.config.auto_launch_internal {
+            // If not running, start internal syncthing
+            if !self.syncthing_running() {
+                log::info!("Auto-launching internal Syncthing as no external process is running and auto_launch_internal is enabled.");
+                self.start_syncthing()?;
+            } else {
+                log::info!("Syncthing is already running, auto-launch not needed.");
+            }
+        } else {
+            log::debug!("Auto-launch internal Syncthing is disabled in config.");
+        }
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -291,6 +307,7 @@ mod tests {
             web_ui_url: "http://localhost:8384".to_string(),
             startup_args: vec![],
             process_closure_behavior: closure_behavior,
+            auto_launch_internal: false,
         }
     }
 

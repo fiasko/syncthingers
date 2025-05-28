@@ -31,6 +31,7 @@ pub struct Config {
     pub startup_args: Vec<String>,
     #[serde(default)]
     pub process_closure_behavior: ProcessClosureBehavior,
+    pub auto_launch_internal: bool, // New field: auto-launch internal syncthing if external not running
 }
 
 impl Config {
@@ -57,6 +58,7 @@ impl Config {
             web_ui_url: "http://localhost:8384".to_string(),
             startup_args: vec!["-no-browser".to_string()],
             process_closure_behavior: ProcessClosureBehavior::default(),
+            auto_launch_internal: false, // Default: do not auto-launch
         }
     }
     
@@ -143,11 +145,15 @@ impl Config {
     /// Returns true if any fields are missing.
     fn check_missing_fields(json_value: &serde_json::Value) -> bool {
         // Check for specific fields we know might be missing
-        // This is specifically checking for the process_closure_behavior field
+        // This is specifically checking for the process_closure_behavior and auto_launch_internal fields
         if let Some(obj) = json_value.as_object() {
             // If we're missing any expected field, return true
             if !obj.contains_key("process_closure_behavior") {
                 log::info!("Missing field 'process_closure_behavior' in config");
+                return true;
+            }
+            if !obj.contains_key("auto_launch_internal") {
+                log::info!("Missing field 'auto_launch_internal' in config");
                 return true;
             }
         }
@@ -171,6 +177,7 @@ mod config_tests {
     fn test_config_defaults() {
         let config = Config::default();
         assert_eq!(config.process_closure_behavior, ProcessClosureBehavior::CloseManaged);
+        assert!(!config.auto_launch_internal); // Test default value for the new field
     }
 
     #[test]
@@ -197,8 +204,9 @@ mod config_tests {
         assert_eq!(merged.web_ui_url, "http://localhost:9999");
         assert_eq!(merged.startup_args, vec!["--test"]);
         
-        // Check that missing field was filled with default
+        // Check that missing fields were filled with defaults
         assert_eq!(merged.process_closure_behavior, ProcessClosureBehavior::CloseManaged);
+        assert!(!merged.auto_launch_internal); // Test default value for the new field
     }
     
     #[test]
@@ -218,8 +226,9 @@ mod config_tests {
         // Load the config, which should add missing fields
         let config = Config::load_or_create(&path)?;
         
-        // Verify the missing field was added with default value
+        // Verify the missing fields were added with default values
         assert_eq!(config.process_closure_behavior, ProcessClosureBehavior::CloseManaged);
+        assert!(!config.auto_launch_internal); // Test default value for the new field
         
         // Original values should be preserved
         assert_eq!(config.log_level, "warn");
@@ -230,6 +239,7 @@ mod config_tests {
         let updated_json: serde_json::Value = serde_json::from_str(&updated_data)?;
         
         assert!(updated_json.get("process_closure_behavior").is_some());
+        assert!(updated_json.get("auto_launch_internal").is_some());
         
         Ok(())
     }
@@ -277,5 +287,6 @@ mod tests {
     fn test_config_with_process_closure_behavior() {
         let config = Config::default();
         assert_eq!(config.process_closure_behavior, ProcessClosureBehavior::CloseManaged);
+        assert!(!config.auto_launch_internal); // Test default value for the new field
     }
 }

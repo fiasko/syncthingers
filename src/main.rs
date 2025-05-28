@@ -79,7 +79,18 @@ fn main() {
     log::info!("Application starting");
 
     // Create shared app state
-    let app_state = std::sync::Arc::new(std::sync::Mutex::new(app_state::AppState::new(config, app_dirs.clone())));
+    let app_state = std::sync::Arc::new(std::sync::Mutex::new(app_state::AppState::new(
+        config,
+        app_dirs.clone(),
+    )));
+
+    // Auto-launch internal syncthing if configured
+    {
+        let mut state = app_state.lock().unwrap();
+        if let Err(e) = state.check_and_autostart_syncthing() {
+            log::warn!("Auto-launch internal syncthing failed: {}", e);
+        }
+    }
 
     // Create tray UI
     let tray_ui = tray_ui::TrayUi::new(app_state.clone()).unwrap_or_else(|e| {

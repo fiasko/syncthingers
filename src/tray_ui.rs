@@ -68,7 +68,6 @@ impl TrayUi {
             return Ok(TrayState::Stopped);
         }
     }
-
     /// Starts a background thread to monitor Syncthing process state and update tray UI.
     fn start_monitoring_thread(
         tray_ui_ptr: Arc<Mutex<Self>>,
@@ -77,17 +76,8 @@ impl TrayUi {
         // Create a weak reference to avoid circular references
         let tray_ui_weak = Arc::downgrade(&tray_ui_ptr);
 
-        // Create a channel for process state updates
-        let (tx, rx) = std::sync::mpsc::channel();
-
-        // Store the sender in AppState for callbacks
-        if let Ok(mut state) = app_state.lock() {
-            state.register_process_state_sender(tx.clone());
-        }
-
-        // Spawn a thread to handle events
+        // Spawn a polling thread
         thread::spawn(move || {
-            // Initialize last_state after setting it with the initial value
             // Get initial process state
             let initial_state = Self::get_current_process_state(&app_state);
             if let Some(tray_ui_arc) = tray_ui_weak.upgrade() {
@@ -98,72 +88,37 @@ impl TrayUi {
                     }
                 }
             }
+
             // Initialize state tracking variable
             let mut last_state = Some(initial_state.0);
 
-            // Wait for events from the process monitor
+            // Simple polling loop
             loop {
-                // Use a longer timeout (10 seconds) since we're now primarily event-driven
-                match rx.recv_timeout(Duration::from_secs(10)) {
-                    Ok(event) => {
-                        debug!("Received process state event: {:?}", event);
+                // Poll every 2 seconds
+                thread::sleep(Duration::from_secs(2));
 
-                        // Get the current process state after receiving an event
-                        let new_state = match event {
-                            crate::process_monitor::ProcessEvent::Started => {
-                                (TrayState::Running, "started by event".to_string())
-                            }
-                            crate::process_monitor::ProcessEvent::Exited => {
-                                (TrayState::Stopped, "exited by event".to_string())
-                            }
-                            _ => {
-                                // For other event types, check the current state
-                                Self::get_current_process_state(&app_state)
-                            }
-                        };
+                // Check current process state
+                let new_state = Self::get_current_process_state(&app_state);
 
-                        // Update UI if state changed
-                        if last_state.as_ref() != Some(&new_state.0) {
-                            Self::log_process_state(&new_state.1);
+                // Update UI if state changed
+                if last_state.as_ref() != Some(&new_state.0) {
+                    Self::log_process_state(&new_state.1);
+                    debug!("State change detected by polling: {:?}", new_state.0);
 
-                            if let Some(tray_ui_arc) = tray_ui_weak.upgrade() {
-                                if let Ok(mut tray_ui) = tray_ui_arc.lock() {
-                                    tray_ui.set_state(new_state.0);
-                                    if let Err(e) = tray_ui.recreate_tray_menu() {
-                                        warn!("Failed to recreate tray menu: {}", e);
-                                    }
-                                }
+                    if let Some(tray_ui_arc) = tray_ui_weak.upgrade() {
+                        if let Ok(mut tray_ui) = tray_ui_arc.lock() {
+                            tray_ui.set_state(new_state.0);
+                            if let Err(e) = tray_ui.recreate_tray_menu() {
+                                warn!("Failed to recreate tray menu: {}", e);
                             }
-
-                            last_state = Some(new_state.0);
                         }
-                    }
-                    Err(std::sync::mpsc::RecvTimeoutError::Timeout) => {
-                        // Occasional state check as a fallback
-                        // This is much less frequent now that we're event-based
-                        let new_state = Self::get_current_process_state(&app_state);
-
-                        // Update UI if state changed
-                        if last_state.as_ref() != Some(&new_state.0) {
-                            Self::log_process_state(&new_state.1);
-                            debug!("State change detected by fallback check: {:?}", new_state.0);
-
-                            if let Some(tray_ui_arc) = tray_ui_weak.upgrade() {
-                                if let Ok(mut tray_ui) = tray_ui_arc.lock() {
-                                    tray_ui.set_state(new_state.0);
-                                    if let Err(e) = tray_ui.recreate_tray_menu() {
-                                        warn!("Failed to recreate tray menu: {}", e);
-                                    }
-                                }
-                            }
-
-                            last_state = Some(new_state.0);
-                        }
-                    }
-                    Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => {
-                        warn!("Process state channel disconnected, exiting monitor thread");
+                    } else {
+                        // TrayUi was dropped, exit the monitoring thread
+                        debug!("TrayUi was dropped, exiting monitor thread");
                         break;
                     }
+
+                    last_state = Some(new_state.0);
                 }
             }
         });

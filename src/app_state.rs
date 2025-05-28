@@ -1,33 +1,38 @@
 use crate::app_dirs::AppDirs;
 use crate::config::Config;
 use crate::process::SyncthingProcess;
-use crate::process_monitor::ProcessEvent;
-use std::sync::mpsc::Sender;
 
 /// Syncthingers application state.
 pub struct AppState {
     pub config: Config,
     pub syncthing_process: Option<SyncthingProcess>,
-    process_state_sender: Option<Sender<ProcessEvent>>,
     pub app_dirs: AppDirs,
 }
 
 impl AppState {
     pub fn new(config: Config, app_dirs: AppDirs) -> Self {
-        let syncthing_process =
-            SyncthingProcess::detect_process(&config.syncthing_path, true, None)
-                .ok()
-                .flatten();
+        // Try to detect and attach to an external Syncthing process
+        let syncthing_process = match SyncthingProcess::detect_process(&config.syncthing_path, true)
+        {
+            Ok(Some(proc)) => {
+                log::info!("Attached to external Syncthing process.");
+                Some(proc)
+            }
+            Ok(None) => None,
+            Err(e) => {
+                log::warn!("Failed to detect external Syncthing process: {}", e);
+                None
+            }
+        };
         Self {
             config,
             syncthing_process,
-            process_state_sender: None,
             app_dirs,
         }
     }
-
+    /// Attempts to detect and attach to an external Syncthing process, updating state.
     pub fn detect_and_attach_external(&mut self) -> Result<bool, crate::error_handling::AppError> {
-        match SyncthingProcess::detect_process(&self.config.syncthing_path, true, None) {
+        match SyncthingProcess::detect_process(&self.config.syncthing_path, true) {
             Ok(Some(proc)) => {
                 self.syncthing_process = Some(proc);
                 log::info!("Attached to external Syncthing process.");
@@ -43,69 +48,69 @@ impl AppState {
             }
         }
     }
-
+    /// Checks if Syncthing is currently running.
     pub fn syncthing_running(&mut self) -> bool {
+        // First, check our process tracking state
+        // If we have a tracked process, just check its status directly
         if let Some(proc) = &mut self.syncthing_process {
+            // We already know about a process - check if it's still running
             if proc.is_running() {
                 return true;
             } else {
+                // Process is no longer running, clear our reference to it
                 self.syncthing_process = None;
-                if let Some(sender) = &self.process_state_sender {
-                    let _ = sender.send(crate::process_monitor::ProcessEvent::StateChanged);
-                }
                 return false;
             }
         }
+
+        // No process being tracked, try to detect an external one
         if let Err(e) = self.detect_and_attach_external() {
             log::warn!("Error during external Syncthing detection: {}", e);
             return false;
         }
-        if let Some(_detected_proc) = &mut self.syncthing_process {
-            if let Some(sender) = &self.process_state_sender {
-                let _ = sender.send(crate::process_monitor::ProcessEvent::StateChanged);
-            }
-            true
-        } else {
-            false
-        }
-    }
 
+        // Check if we found and attached to an external process
+        self.syncthing_process.is_some()
+    }
+    /// Starts the Syncthing process if it's not already running.
     pub fn start_syncthing(&mut self) -> Result<(), crate::error_handling::AppError> {
         if self.syncthing_running() {
             return Ok(());
         }
-        let mut process = SyncthingProcess::new(&self.config.syncthing_path, None);
-        process.start(&self.config.startup_args).map_err(|e| {
+        let exe_path = &self.config.syncthing_path;
+        let args = &self.config.startup_args;
+        let mut process = SyncthingProcess::new(exe_path);
+        process.start(args).map_err(|e| {
             crate::error_handling::AppError::ProcessError(format!(
                 "Failed to start Syncthing: {}",
                 e
             ))
         })?;
         self.syncthing_process = Some(process);
-        if let Some(sender) = &self.process_state_sender {
-            let _ = sender.send(crate::process_monitor::ProcessEvent::Started);
-        }
+
         log::info!("Syncthing process started successfully.");
         Ok(())
     }
-
+    /// Stops the Syncthing process if it's running.
     pub fn stop_syncthing(&mut self) -> Result<(), crate::error_handling::AppError> {
         if let Some(process) = &mut self.syncthing_process {
-            process.stop().map_err(|e| {
-                crate::error_handling::AppError::ProcessError(format!(
-                    "Failed to stop Syncthing: {}",
-                    e
-                ))
-            })?;
-            log::info!("Syncthing process stopped successfully.");
-            if let Some(sender) = &self.process_state_sender {
-                let _ = sender.send(crate::process_monitor::ProcessEvent::Exited);
+            // Try to stop the process, but don't fail if it's an external process
+            if let Err(e) = process.stop() {
+                log::warn!("Could not stop process (likely external): {}", e);
+            } else {
+                log::info!("Syncthing process stopped successfully.");
             }
         }
         self.syncthing_process = None;
         Ok(())
     }
 
+    /// Handles process closure on application exit based on configuration.
+    ///
+    /// This method implements the configured process closure behavior:
+    /// - CloseAll: Stops both managed and external Syncthing processes
+    /// - CloseManaged: Only stops processes started by this app
+    /// - DontClose: Leaves all processes running
     pub fn handle_exit_closure(&mut self) -> Result<(), crate::error_handling::AppError> {
         match self.config.process_closure_behavior {
             crate::config::ProcessClosureBehavior::CloseAll => {
@@ -123,21 +128,21 @@ impl AppState {
         }
     }
 
+    /// Stops all Syncthing processes (both managed and external).
     fn stop_all_syncthing_processes(&mut self) -> Result<(), crate::error_handling::AppError> {
+        // First stop our managed process if any
         let _ = self.stop_syncthing();
-        if let Err(e) = SyncthingProcess::detect_process(&self.config.syncthing_path, true, None)
-            .and_then(|opt| {
-                if let Some(mut proc) = opt {
-                    proc.stop()?;
-                }
-                Ok(())
-            })
-        {
+
+        // Then try to stop any external processes
+        if let Err(e) = self.stop_external_syncthing_processes() {
             log::warn!("Failed to stop external Syncthing processes: {}", e);
+            // Don't return error here as we want to try our best effort
         }
+
         Ok(())
     }
 
+    /// Stops only processes that were started by this application.
     fn stop_managed_syncthing_processes(&mut self) -> Result<(), crate::error_handling::AppError> {
         if let Some(proc) = &self.syncthing_process {
             if proc.started_by_app {
@@ -150,51 +155,24 @@ impl AppState {
             Ok(())
         }
     }
-
-    pub fn register_process_state_sender(&mut self, sender: Sender<ProcessEvent>) {
-        self.process_state_sender = Some(sender);
+    /// Attempts to stop external Syncthing processes.
+    fn stop_external_syncthing_processes(&self) -> Result<(), crate::error_handling::AppError> {
+        // Use the process module function to stop external processes
+        crate::process::stop_external_syncthing_processes(&self.config.syncthing_path).map_err(
+            |e| {
+                crate::error_handling::AppError::ProcessError(format!(
+                    "Failed to stop external Syncthing processes: {}",
+                    e
+                ))
+            },
+        )?;
+        log::info!("Stopped external Syncthing processes");
+        Ok(())
     }
-
-    pub fn handle_process_exit(&mut self, pid: u32) {
-        log::info!("Handling process exit for PID {}", pid);
-        if let Some(proc) = &self.syncthing_process {
-            if let Some(proc_pid) = proc.pid {
-                if proc_pid == pid {
-                    log::info!("Syncthing process (PID: {}) has exited", pid);
-                    self.syncthing_process = None;
-                    if let Some(sender) = &self.process_state_sender {
-                        let _ = sender.send(crate::process_monitor::ProcessEvent::Exited);
-                    }
-                    return;
-                }
-            }
-        }
-        if let Some(proc) = &self.syncthing_process {
-            if !proc.started_by_app {
-                let config_path = self.config.syncthing_path.clone();
-                match SyncthingProcess::detect_process(&config_path, true, None) {
-                    Ok(None) => {
-                        log::info!("External Syncthing process is no longer running");
-                        self.syncthing_process = None;
-                        if let Some(sender) = &self.process_state_sender {
-                            let _ = sender.send(crate::process_monitor::ProcessEvent::Exited);
-                        }
-                    }
-                    Ok(Some(_)) => {
-                        log::debug!(
-                            "External Syncthing process is still running (but not the one that exited)"
-                        );
-                    }
-                    Err(e) => {
-                        log::warn!("Error checking external Syncthing process status: {}", e);
-                    }
-                }
-            }
-        }
-    }
-
+    /// Checks and auto-starts Syncthing if needed based on configuration.
     pub fn check_and_autostart_syncthing(&mut self) -> Result<(), crate::error_handling::AppError> {
         if self.config.auto_launch_internal {
+            // If not running, start internal syncthing
             if !self.syncthing_running() {
                 log::info!(
                     "Auto-launching internal Syncthing as no external process is running and auto_launch_internal is enabled."
@@ -214,11 +192,10 @@ impl AppState {
 mod tests {
     use super::*;
     use crate::config::ProcessClosureBehavior;
-
     fn create_test_config(closure_behavior: ProcessClosureBehavior) -> Config {
         Config {
             log_level: "info".to_string(),
-            syncthing_path: "test_syncthing.exe".to_string(),
+            syncthing_path: "nonexistent_test_syncthing_12345.exe".to_string(), // Use a clearly nonexistent path
             web_ui_url: "http://localhost:8384".to_string(),
             startup_args: vec![],
             process_closure_behavior: closure_behavior,
@@ -250,7 +227,6 @@ mod tests {
     fn test_handle_exit_closure_close_managed_with_external() {
         let config = create_test_config(ProcessClosureBehavior::CloseManaged);
         let mut app_state = AppState::new(config, AppDirs::new(None).unwrap());
-
         // Simulate an external process
         app_state.syncthing_process =
             Some(crate::process::SyncthingProcess::mock_for_testing(false));
@@ -273,9 +249,7 @@ mod tests {
         let result = app_state.handle_exit_closure();
         assert!(result.is_ok());
         assert!(app_state.syncthing_process.is_none());
-    }
-
-    #[test]
+    }    #[test]
     fn test_handle_exit_closure_close_all() {
         let config = create_test_config(ProcessClosureBehavior::CloseAll);
         let mut app_state = AppState::new(config, AppDirs::new(None).unwrap());
@@ -284,9 +258,12 @@ mod tests {
         app_state.syncthing_process =
             Some(crate::process::SyncthingProcess::mock_for_testing(false));
 
-        // Should succeed and stop all processes
+        // For CloseAll behavior, it calls stop_all_syncthing_processes which:
+        // 1. Calls stop_syncthing() to clean up tracked process (sets syncthing_process = None)
+        // 2. Calls stop_external_syncthing_processes() (skipped in test env)
         let result = app_state.handle_exit_closure();
         assert!(result.is_ok());
+        // The process should be None after cleanup since stop_syncthing() was called
         assert!(app_state.syncthing_process.is_none());
     }
 }

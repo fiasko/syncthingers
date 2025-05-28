@@ -47,9 +47,8 @@ fn main() {
         std::process::exit(1);
     }
 
-    // Get log file path
-    let log_file_path = app_dirs.log_file_path();
-    logging::init_logging(log_level, &log_file_path);
+    // Get log file path and initialize logging
+    logging::init_logging(log_level, &app_dirs);
 
     // Get config file path
     let config_file_path = app_dirs.config_file_path();

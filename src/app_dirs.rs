@@ -8,6 +8,9 @@ pub struct AppDirs {
     base_dir: PathBuf,
 }
 
+const CONFIG_FILE_NAME: &str = "configuration.json";
+const LOG_FILE_NAME: &str = "syncthingers.log";
+
 impl AppDirs {
     /// Create a new AppDirs instance, using the provided override or the default app data dir.
     pub fn new(override_dir: Option<PathBuf>) -> io::Result<Self> {
@@ -41,12 +44,12 @@ impl AppDirs {
 
     /// Get the path to the configuration file.
     pub fn config_file_path(&self) -> PathBuf {
-        self.base_dir.join("configuration.json")
+        self.base_dir.join(CONFIG_FILE_NAME)
     }
 
     /// Get the path to the log file.
     pub fn log_file_path(&self) -> PathBuf {
-        self.base_dir.join("syncthingers.log")
+        self.base_dir.join(LOG_FILE_NAME)
     }
 }
 
@@ -68,7 +71,7 @@ mod tests {
         let temp_dir = env::temp_dir().join("test_app_dirs_config");
         let app_dirs = AppDirs::new(Some(temp_dir.clone())).unwrap();
         let config_path = app_dirs.config_file_path();
-        assert_eq!(config_path, temp_dir.join("configuration.json"));
+        assert_eq!(config_path, temp_dir.join(CONFIG_FILE_NAME));
     }
 
     #[test]
@@ -76,6 +79,6 @@ mod tests {
         let temp_dir = env::temp_dir().join("test_app_dirs_log");
         let app_dirs = AppDirs::new(Some(temp_dir.clone())).unwrap();
         let log_path = app_dirs.log_file_path();
-        assert_eq!(log_path, temp_dir.join("syncthingers.log"));
+        assert_eq!(log_path, temp_dir.join(LOG_FILE_NAME));
     }
 }

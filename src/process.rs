@@ -108,9 +108,7 @@ impl SyncthingProcess {
         if self.started_by_app {
             self.tracked_pids = self.find_all_syncthing_processes();
         }
-    }
-
-    /// Starts a new Syncthing process.
+    }    /// Starts a new Syncthing process.
     pub fn start(&mut self, args: &[String]) -> io::Result<()> {
         if self.child.is_some() {
             return Err(io::Error::new(
@@ -125,6 +123,14 @@ impl SyncthingProcess {
         command.args(args);
         command.stdout(Stdio::null());
         command.stderr(Stdio::null());
+        
+        // On Windows, prevent console window from appearing
+        #[cfg(windows)]
+        {
+            use std::os::windows::process::CommandExt;
+            command.creation_flags(0x08000000); // CREATE_NO_WINDOW
+        }
+        
         let child = command.spawn()?;
 
         self.pid = Some(child.id());

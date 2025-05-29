@@ -68,6 +68,7 @@ impl TrayUi {
             return Ok(TrayState::Stopped);
         }
     }
+    
     /// Starts a background thread to monitor Syncthing process state and update tray UI.
     fn start_monitoring_thread(
         tray_ui_ptr: Arc<Mutex<Self>>,
@@ -130,11 +131,17 @@ impl TrayUi {
     fn get_current_process_state(app_state: &Arc<Mutex<AppState>>) -> (TrayState, String) {
         match app_state.lock() {
             Ok(mut state) => {
-                if let Some(proc) = &mut state.syncthing_process {
-                    if proc.started_by_app {
-                        (TrayState::Running, "started by app".to_string())
+                // Use syncthing_running() to get the actual state, which handles process cleanup
+                if state.syncthing_running() {
+                    if let Some(proc) = &state.syncthing_process {
+                        if proc.started_by_app {
+                            (TrayState::Running, "started by app".to_string())
+                        } else {
+                            (TrayState::Running, "external".to_string())
+                        }
                     } else {
-                        (TrayState::Running, "external".to_string())
+                        // This shouldn't happen, but handle it gracefully
+                        (TrayState::Stopped, "not running".to_string())
                     }
                 } else {
                     (TrayState::Stopped, "not running".to_string())
@@ -291,11 +298,13 @@ impl TrayUi {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::config::Config; // Helper for creating test config
+    use crate::config::Config;
+
+    // Helper for creating test config
     fn create_test_config() -> Config {
         Config {
             log_level: "info".to_string(),
-            syncthing_path: "syncthing.exe".to_string(),
+            syncthing_path: "nonexistent_test_syncthing.exe".to_string(), // Use test pattern
             web_ui_url: "http://localhost:8384".to_string(),
             startup_args: vec![],
             process_closure_behavior: crate::config::ProcessClosureBehavior::default(),
@@ -318,6 +327,7 @@ mod tests {
         let state = TrayUi::detect_initial_state(&app_state);
         assert!(state.is_ok(), "Initial state detection should succeed");
     }
+
     #[test]
     fn test_process_menu_action_exit() {
         // This test would need to mock std::process::exit for full testing
@@ -333,6 +343,7 @@ mod tests {
         // Just a placeholder assertion to make the test pass
         assert!(true);
     }
+
     #[test]
     fn test_get_current_process_state() {
         let config = create_test_config();

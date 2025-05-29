@@ -6,7 +6,6 @@ pub mod config;
 mod error_handling;
 mod logging;
 mod process;
-mod process_monitor;
 mod singleton;
 mod tray_ui;
 

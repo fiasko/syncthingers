@@ -112,16 +112,25 @@ impl AppState {
 
         log::info!("Syncthing process started successfully.");
         Ok(())
-    }
-
-    /// Stops the Syncthing process if it's running.
+    }    /// Stops the Syncthing process if it's running.
     pub fn stop_syncthing(&mut self) -> Result<(), crate::error_handling::AppError> {
         if let Some(process) = &mut self.syncthing_process {
-            // Try to stop the process, but don't fail if it's an external process
-            if let Err(e) = process.stop() {
-                log::warn!("Could not stop process (likely external): {}", e);
+            if process.started_by_app {
+                // For app-started processes, use the normal stop method
+                if let Err(e) = process.stop() {
+                    log::warn!("Failed to stop app-started process: {}", e);
+                } else {
+                    log::info!("App-started Syncthing process stopped successfully.");
+                }
             } else {
-                log::info!("Syncthing process stopped successfully.");
+                // For external processes, use the external process stopping function
+                log::info!("Stopping external Syncthing process via external process termination");
+                if let Err(e) = self.stop_external_syncthing_processes() {
+                    log::warn!("Failed to stop external Syncthing processes: {}", e);
+                    return Err(e);
+                } else {
+                    log::info!("External Syncthing process stopped successfully.");
+                }
             }
         }
         self.syncthing_process = None;

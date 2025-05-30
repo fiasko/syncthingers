@@ -23,6 +23,8 @@
 - [x] Add `thiserror` for custom error handling
 - [x] Add `log` and a logger implementation (e.g., `simplelog`)
 - [x] Add platform-specific dependencies for singleton enforcement (`winapi` for Windows with features: `winuser synchapi errhandlingapi winnt handleapi minwindef winerror`, `fs2` for file lock on other platforms)
+- [x] Add `sysinfo` for cross-platform process management and monitoring
+- [x] Add `dirs` for platform-specific user directory access
 
 ## Singleton Enforcement (Portable)
 - [x] Create a `singleton.rs` module with a portable `SingletonGuard` interface
@@ -42,18 +44,21 @@
 - [x] When creating the default config file, try to detect `syncthing.exe` in the system PATH and use its path if found.
 - [x] Add process closure behavior configuration option (close_all, close_managed, dont_close)
 - [x] Implement automatic configuration updating when new fields are added to the Config struct
+- [x] Add auto-launch internal Syncthing configuration option
 
 ## Syncthing Process Management
 - [x] Implement process management (start, stop, monitor Syncthing)
 - [x] Store process handle for management
 - [x] Handle errors (e.g., executable not found, failed to start)
 - [x] Detect if Syncthing was started by this app
-- [ ] Monitor the Syncthing process: if `syncthing.exe` is killed or crashes, update the tray icon state accordingly.
- - [ ] Make good event based monitoring system for waiting external syncthing start and stop events.
-  - [ ] remove the process polling system
-- [x] Ensure that stopping Syncthing also terminates all child processes (use Windows Job Objects for process tree termination)
+- [x] Monitor the Syncthing process: if `syncthing.exe` is killed or crashes, update the tray icon state accordingly.
+ - [x] Implemented polling-based monitoring system with 2-second intervals using sysinfo
+ - [x] Added cross-platform process detection and monitoring
+- [x] Ensure that stopping Syncthing also terminates all child processes (migrated from Windows Job Objects to sysinfo for cross-platform process tree termination)
 - [x] When starting `syncthing.exe`, ensure it does not open a terminal window (should be fully background/hidden).
 - [x] Fix issue with command windows appearing when terminating external processes (CREATE_NO_WINDOW flag)
+- [x] Enable stopping external Syncthing processes from tray menu
+- [x] Implement comprehensive process tree tracking and termination using sysinfo
 
 ## System Tray UI
 - [x] Add tray icon (running/stopped state)
@@ -76,6 +81,16 @@
 ## Application State Management
 - [x] Centralize app state (config, process handle, UI state)
 - [x] Ensure thread-safe access (e.g., Arc<Mutex<_>>)
+- [x] Implement cross-platform process management using sysinfo
+- [x] Add comprehensive process tree tracking and termination
+
+## Cross-Platform Process Management
+- [x] Implement process tree discovery and tracking using sysinfo
+- [x] Add cross-platform process termination with sysinfo's kill() method
+- [x] Optimize process monitoring with minimal refresh flags for better performance
+- [x] Add test environment detection to skip external process operations during testing
+- [x] Implement external process detection and attachment capabilities
+- [x] Add ability to stop external Syncthing processes from tray menu
 
 ## Error Handling & User Feedback
 - [x] Use custom error types throughout
@@ -86,7 +101,7 @@
 - [x] Embed icons and version info in executable
 - [x] Build release executable
 - [x] Test by running the .exe directly
-- [ ] Document Syncthing path/config requirements
+- [x] Document Syncthing path/config requirements
 
 ## Testing & Robustness
 - [ ] Test singleton enforcement
@@ -99,8 +114,11 @@
 - [x] Place settings files in user home directory on supported platforms
 - [x] For Windows, store in AppData\Local\Syncthingers directory (using dirs crate)
 - [x] Use this directory for log files and configuration in release builds
-- [x] Add `--config-path` argument to override the default location
+- [x] ~~Add `--config-path` argument to override the default location~~ (replaced with `--portable` flag)
 - [x] Create directories if they don't exist on application startup
+- [x] Add `--portable` flag to use current working directory for configuration and logs
+- [x] Implement stateful AppDirs module for centralized directory management
+- [x] Add auto-launch feature for internal Syncthing when external is not running
 
 ## Syncthing Transfer Speed Monitoring
 - [ ] Add a configurable option in the configuration to enable/disable transfer speed monitoring
@@ -116,7 +134,7 @@
 - [ ] Enable basic remote control operations
 
 ## Future Enhancements (Optional)
-- [ ] Auto-start Syncthing with the app
+- [x] Auto-start Syncthing with the app (implemented as auto_launch_internal config option)
 - [ ] Start tray app with Windows
 - [ ] Advanced Syncthing status detection
 - [ ] Add a simple UI panel for logs/config

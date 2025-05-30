@@ -1,80 +1,77 @@
-# SyncthingProcess Module Refactoring
+# Process Management Documentation
 
-This document describes the refactoring of the `process.rs` module in the Syncthingers application.
+This document describes the process management implementation in the Syncthingers application, specifically the `process.rs` module.
 
-## Overview of Changes
+## Overview
 
-The `process.rs` module has been refactored to improve its structure, testability, and align it with modern Rust coding practices.
+The process management system in Syncthingers has been designed to provide process control for Syncthing instances. It uses the `sysinfo` crate for cross-platform process monitoring and control.
 
-### Key Improvements
+### Key Features
 
-1. **Enhanced Documentation**:
-   - Added comprehensive documentation for all public methods
-   - Improved function documentation with proper argument and return descriptions
-   - Added module-level documentation for better code understanding
+1. **Cross-Platform Process Management**:
+   - Uses `sysinfo` crate for process detection, monitoring, and termination
+   - Works consistently across different operating systems
 
-2. **Better Code Structure**:
-   - Reorganized functions for better readability and maintainability
-   - Extracted complex code blocks into focused sections
-   - Used consistent formatting throughout the module
+2. **Process Tree Tracking**:
+   - Tracks all Syncthing processes (parent and children)
+   - Ensures complete shutdown of process trees
+   - Prevents orphaned child processes
 
-3. **Improved Error Handling**:
-   - Added more detailed error messages
-   - Improved logging throughout the module
-   - Added debug logs for better diagnosis
+3. **External Process Detection**:
+   - Can detect and manage Syncthing processes not started by the app
+   - Provides capability to stop external Syncthing instances
+   - Differentiates between app-managed and external processes
 
-4. **Enhanced Testability**:
-   - Added a `mock_for_testing` function for unit tests
-   - Created basic unit tests for core functionality
-   - Added test placeholders with comments on how to implement more comprehensive tests
+4. **Console Window Prevention**:
+   - On Windows, prevents console windows from appearing when starting processes
+   - Uses `CREATE_NO_WINDOW` flag for clean background operation
 
-5. **Type Safety**:
-   - Used proper Windows API types
-   - Improved error propagation
-   - Made functions more type-safe
+5. **Robust Error Handling**:
+   - Comprehensive error messages and logging
+   - Graceful handling of process state transitions
+   - Test environment detection to prevent interference
 
-6. **Process Management**:
-   - Enhanced external process detection
-   - Improved the mechanism for stopping external processes
-   - Added better logging for process state transitions
+## Implementation Details
 
-## The New Structure
+### SyncthingProcess Struct
+
+The core `SyncthingProcess` struct manages individual Syncthing instances:
+
+```rust
+pub struct SyncthingProcess {
+    child: Option<Child>,           // Child process handle (for app-started processes)
+    pub started_by_app: bool,       // Flag indicating if process was started by app
+    pub syncthing_path: String,     // Path to Syncthing executable
+    pub pid: Option<u32>,          // Main process ID
+    tracked_pids: Vec<u32>,        // All tracked Syncthing process IDs
+    system: System,                // sysinfo System instance for monitoring
+}
+```
 
 ### Public API
-- `SyncthingProcess::start()`: Starts a new Syncthing process
-- `SyncthingProcess::stop()`: Stops the Syncthing process
-- `SyncthingProcess::is_running()`: Checks if the process is running
-- `SyncthingProcess::detect_existing()`: Detects if a Syncthing process is already running
-- `SyncthingProcess::detect_external()`: Detects and attaches to an external Syncthing process
 
-### Private Helper Methods
-- `enumerate_processes_by_name()`: Windows-specific helper for process detection
+**Process Lifecycle Management:**
+- `SyncthingProcess::new(path: &str)`: Creates a new process manager instance
+- `start(&mut self, args: &[String])`: Starts a new Syncthing process with specified arguments
+- `stop(&mut self)`: Stops the process and all tracked child processes
+- `is_running(&mut self)`: Checks if the process is currently running
 
-### Test Helpers
-- `mock_for_testing()`: Creates a mock process for unit testing
+**Process Detection:**
+- `detect_process(syncthing_path: &str, external_only: bool)`: Detects existing Syncthing processes
+- `stop_external_syncthing_processes(syncthing_path: &str)`: Stops all external Syncthing processes
 
-## Testing
+## Potential Improvements for the future
 
-The module now includes a basic test suite that demonstrates:
-1. Mock process creation
-2. Running state detection
-3. Platform-specific test placeholders
-
-For more comprehensive testing, consider adding:
-- A mock command executor for testing process interaction
-- Integration tests with actual process spawning (in CI environments)
-- Property-based testing for complex scenarios
-
-## Future Improvements
-
-1. Consider creating a platform-agnostic process management trait:
+1. **Enhanced Process Tree Discovery**:
    ```rust
-   trait ProcessManager {
-       fn start(&self, path: &str, args: &[String]) -> io::Result<ProcessHandle>;
-       fn stop(&self, handle: &ProcessHandle) -> io::Result<()>;
-       fn is_running(&self, handle: &ProcessHandle) -> bool;
+   fn discover_process_tree(&mut self, root_pid: u32) -> Vec<u32> {
+       // Recursive discovery of all child processes
    }
    ```
 
-2. Improve error handling with custom error types
-3. Create a more robust process detection method that doesn't rely on external commands
+2. **Graceful Shutdown**:
+   ```rust
+   fn graceful_stop(&mut self, timeout: Duration) -> io::Result<()> {
+       // Attempt graceful shutdown before force termination
+   }
+   ```

@@ -46,6 +46,15 @@
 - [x] Implement automatic configuration updating when new fields are added to the Config struct
 - [x] Add auto-launch internal Syncthing configuration option
 
+## Real-time Configuration Monitoring
+- [ ] Implement file system watcher for `configuration.json` changes
+- [ ] Add automatic configuration reload when file is modified
+- [ ] Implement configuration validation with detailed error reporting
+- [ ] Add error popup display for invalid configuration files (shown only once per modification)
+- [ ] Log detailed configuration error information to log file
+- [ ] Apply configuration changes without requiring application restart
+- [ ] Handle configuration file deletion and recreation scenarios
+
 ## Syncthing Process Management
 - [x] Implement process management (start, stop, monitor Syncthing)
 - [x] Store process handle for management
@@ -59,6 +68,7 @@
 - [x] Fix issue with command windows appearing when terminating external processes (CREATE_NO_WINDOW flag)
 - [x] Enable stopping external Syncthing processes from tray menu
 - [x] Implement comprehensive process tree tracking and termination using sysinfo
+- [ ] Print Syncthing version to log file each time it's started (execute `syncthing --version` and log the output)
 
 ## System Tray UI
 - [x] Add tray icon (running/stopped state)
@@ -135,9 +145,13 @@
 
 ## Future Enhancements (Optional)
 - [x] Auto-start Syncthing with the app (implemented as auto_launch_internal config option)
+- [ ] Real-time configuration file monitoring and hot-reload (partially planned - see Real-time Configuration Monitoring section)
 - [ ] Start tray app with Windows
 - [ ] Advanced Syncthing status detection
 - [ ] Add a simple UI panel for logs/config
+- [ ] Add a `--print-log` startup argument that makes the log printing also in terminal when running debug build
+- [ ] Refactor app argument handling to use clap
+- [ ] Figure out better way to track spawned syncthing child processes.
 
 ---
 This checklist is based solely on the project plan and is intended to guide development from start to finish.

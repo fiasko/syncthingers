@@ -1,3 +1,4 @@
+use crate::utils;
 use std::io;
 use std::path::Path;
 use std::process::{Child, Command, Stdio};
@@ -47,13 +48,13 @@ impl SyncthingProcess {
             .and_then(|name| name.to_str())
             .unwrap_or("syncthing");
 
-        // Remove .exe extension if present for cross-platform compatibility
-        let exe_name = exe_name.strip_suffix(".exe").unwrap_or(exe_name);
+        // Normalize executable name for cross-platform compatibility
+        let exe_name = utils::normalize_exe_name(exe_name);
 
         // Find processes matching the Syncthing executable
         for (pid, process) in system.processes() {
             let process_name = process.name().to_string_lossy();
-            let process_name = process_name.strip_suffix(".exe").unwrap_or(&process_name);
+            let process_name = utils::normalize_exe_name(&process_name);
 
             if process_name.eq_ignore_ascii_case(exe_name) {
                 let mut syncthing_proc = Self::new(syncthing_path);
@@ -86,13 +87,13 @@ impl SyncthingProcess {
             .and_then(|name| name.to_str())
             .unwrap_or("syncthing");
 
-        // Remove .exe extension if present for cross-platform compatibility
-        let exe_name = exe_name.strip_suffix(".exe").unwrap_or(exe_name);
+        // Normalize executable name for cross-platform compatibility
+        let exe_name = utils::normalize_exe_name(exe_name);
 
         let mut pids = Vec::new();
         for (pid, process) in self.system.processes() {
             let process_name = process.name().to_string_lossy();
-            let process_name = process_name.strip_suffix(".exe").unwrap_or(&process_name);
+            let process_name = utils::normalize_exe_name(&process_name);
 
             if process_name.eq_ignore_ascii_case(exe_name) {
                 pids.push(pid.as_u32());
@@ -108,7 +109,8 @@ impl SyncthingProcess {
         if self.started_by_app {
             self.tracked_pids = self.find_all_syncthing_processes();
         }
-    }    /// Starts a new Syncthing process.
+    }
+    /// Starts a new Syncthing process.
     pub fn start(&mut self, args: &[String]) -> io::Result<()> {
         if self.child.is_some() {
             return Err(io::Error::new(
@@ -123,14 +125,14 @@ impl SyncthingProcess {
         command.args(args);
         command.stdout(Stdio::null());
         command.stderr(Stdio::null());
-        
+
         // On Windows, prevent console window from appearing
         #[cfg(windows)]
         {
             use std::os::windows::process::CommandExt;
             command.creation_flags(0x08000000); // CREATE_NO_WINDOW
         }
-        
+
         let child = command.spawn()?;
 
         self.pid = Some(child.id());
@@ -286,10 +288,7 @@ pub fn stop_external_syncthing_processes(syncthing_path: &str) -> io::Result<()>
     use sysinfo::{ProcessesToUpdate, System};
 
     // Skip process killing for clearly test-related paths
-    if syncthing_path.contains("test")
-        || syncthing_path.contains("mock")
-        || syncthing_path.contains("nonexistent")
-    {
+    if utils::is_test_environment(syncthing_path) {
         log::debug!(
             "Skipping external process termination for test path: {}",
             syncthing_path
@@ -306,13 +305,13 @@ pub fn stop_external_syncthing_processes(syncthing_path: &str) -> io::Result<()>
         .and_then(|name| name.to_str())
         .unwrap_or("syncthing");
 
-    // Remove .exe extension if present for cross-platform compatibility
-    let exe_name = exe_name.strip_suffix(".exe").unwrap_or(exe_name);
+    // Normalize executable name for cross-platform compatibility
+    let exe_name = utils::normalize_exe_name(exe_name);
 
     let mut terminated_count = 0; // Find and terminate all Syncthing processes
     for (pid, process) in system.processes() {
         let process_name = process.name().to_string_lossy();
-        let process_name = process_name.strip_suffix(".exe").unwrap_or(&process_name);
+        let process_name = utils::normalize_exe_name(&process_name);
 
         if process_name.eq_ignore_ascii_case(exe_name) {
             log::info!("Terminating external Syncthing process with PID: {}", pid);

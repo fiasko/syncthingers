@@ -1,4 +1,4 @@
-#![cfg_attr(not(test), windows_subsystem = "windows")]
+#![cfg_attr(all(not(test), not(debug_assertions)), windows_subsystem = "windows")]
 
 mod app_dirs;
 mod app_state;
@@ -8,6 +8,7 @@ mod logging;
 mod process;
 mod singleton;
 mod tray_ui;
+mod utils;
 
 use config::Config;
 use simplelog::LevelFilter;
@@ -48,6 +49,8 @@ fn main() {
 
     // Get log file path and initialize logging
     logging::init_logging(log_level, &app_dirs);
+
+    log::info!("{} v{}", env!("CARGO_PKG_NAME"), env!("CARGO_PKG_VERSION"),);
 
     // Get config file path
     let config_file_path = app_dirs.config_file_path();

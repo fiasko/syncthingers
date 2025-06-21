@@ -6,6 +6,7 @@ use std::time::Duration;
 use tray_item::TrayItem;
 
 use crate::app_state::AppState;
+use crate::config::Config;
 use crate::error_handling::AppError;
 
 /// Represents the current state of the system tray UI.
@@ -62,13 +63,15 @@ impl TrayUi {
     fn detect_initial_state(app_state: &Arc<Mutex<AppState>>) -> Result<TrayState, Box<dyn Error>> {
         let mut state_guard = app_state.lock().map_err(|_| "Failed to lock app state")?;
 
-        if state_guard.syncthing_running() {
+        if state_guard.syncthing_running()
+            || state_guard.detect_and_attach_external().unwrap_or(false)
+        {
             return Ok(TrayState::Running);
         } else {
             return Ok(TrayState::Stopped);
         }
     }
-    
+
     /// Starts a background thread to monitor Syncthing process state and update tray UI.
     fn start_monitoring_thread(
         tray_ui_ptr: Arc<Mutex<Self>>,
@@ -176,7 +179,7 @@ impl TrayUi {
 
         // Create new tray with updated icon
         let mut new_tray = TrayItem::new("Syncthingers", icon)
-            .map_err(|e| AppError::TrayUiError(format!("Failed to recreate tray: {e}")))?;
+            .map_err(|e| AppError::TrayUi(format!("Failed to recreate tray: {e}")))?;
 
         // Add menu items with appropriate callbacks
         self.add_menu_items(&mut new_tray)?;
@@ -220,9 +223,9 @@ impl TrayUi {
         let action_clone = action;
 
         tray.add_menu_item(label, move || {
-            let _ = Self::handle_menu_action_static(app_state.clone(), action_clone);
+            _ = Self::handle_menu_action_static(app_state.clone(), action_clone);
         })
-        .map_err(|e| AppError::TrayUiError(format!("Failed to add menu item '{}': {}", label, e)))
+        .map_err(|e| AppError::TrayUi(format!("Failed to add menu item '{}': {}", label, e)))
     }
 
     /// Sets up the initial tray menu.
@@ -239,7 +242,7 @@ impl TrayUi {
 
         match app_state.lock() {
             Ok(mut state) => Self::process_menu_action(&mut state, action),
-            Err(_) => Err(AppError::TrayUiError(
+            Err(_) => Err(AppError::TrayUi(
                 "Failed to lock app state".to_string(),
             )),
         }
@@ -257,7 +260,7 @@ impl TrayUi {
             }
             TrayMenuAction::OpenWebUI => {
                 opener::open(&state.config.web_ui_url)
-                    .map_err(|e| AppError::TrayUiError(format!("Failed to open web UI: {}", e)))?;
+                    .map_err(|e| AppError::TrayUi(format!("Failed to open web UI: {}", e)))?;
             }
             TrayMenuAction::OpenConfig => {
                 // Use the stateful AppDirs instance
@@ -273,13 +276,13 @@ impl TrayUi {
                         config_file_path.display()
                     );
                     // If we got here, we couldn't find any config file
-                    return Err(AppError::TrayUiError(
+                    return Err(AppError::TrayUi(
                         "Configuration file not found".to_string(),
                     ));
                 }
                 // Open the configuration file
-                crate::config::Config::open_in_editor(&config_file_path).map_err(|e| {
-                    AppError::TrayUiError(format!("Failed to open config file: {}", e))
+                Config::open_in_editor(&config_file_path).map_err(|e| {
+                    AppError::TrayUi(format!("Failed to open config file: {}", e))
                 })?;
             }
             TrayMenuAction::Exit => {
@@ -298,21 +301,18 @@ impl TrayUi {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::config::Config;
+    use crate::app_dirs::AppDirs;
 
     // Helper for creating test config
     fn create_test_config() -> Config {
         Config {
-            log_level: "info".to_string(),
             syncthing_path: "nonexistent_test_syncthing.exe".to_string(), // Use test pattern
-            web_ui_url: "http://localhost:8384".to_string(),
             startup_args: vec![],
-            process_closure_behavior: crate::config::ProcessClosureBehavior::default(),
-            auto_launch_internal: false,
+            ..Config::default()
         }
     }
-    fn dummy_app_dirs() -> crate::app_dirs::AppDirs {
-        crate::app_dirs::AppDirs::new(None).unwrap()
+    fn dummy_app_dirs() -> AppDirs {
+        AppDirs::new(None).unwrap()
     }
 
     #[test]

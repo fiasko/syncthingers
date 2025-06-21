@@ -1,6 +1,6 @@
 [package]
 name = "syncthingers"
-version = "0.6.0"
+version = "0.7.0"
 edition = "2024"
 authors = ["Asko Eronen"]
 
@@ -12,9 +12,16 @@ serde_json = "1.0.140"
 simplelog = "0.12.2"
 thiserror = "2.0.12"
 tray-item = "0.10.0"
-winapi = { version = "0.3.9", features = ["winuser", "synchapi", "errhandlingapi", "handleapi", "minwindef", "winerror"] }
+winapi = { version = "0.3.9", features = [
+    "winuser",
+    "synchapi",
+    "errhandlingapi",
+    "handleapi",
+    "minwindef",
+    "winerror",
+] }
 dirs = "6.0.0"
-sysinfo = "0.35.1"
+sysinfo = "0.35.2"
 
 [build-dependencies]
 winres = "0.1.12"

@@ -29,6 +29,9 @@ This project is a learning project for AI prompt coding and Rust language for me
 - **Transfer speed monitoring:** Monitor info like transfer speed from Syncthing using web API.
 - **Remote Syncthing management:** Monitor Syncthing services from other computers and servers.
 - **Windows auto-start:** Start tray app automatically with Windows.
+- **Real-time configuration monitoring:** Monitors `configuration.json` for file changes and automatically applies updates without restart.
+- **Configuration validation:** Validates configuration files on load and change, with detailed error reporting and user notifications.
+
 
 ## Getting Started
 1. **Clone the repository:**

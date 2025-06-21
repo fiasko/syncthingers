@@ -3,32 +3,24 @@ use thiserror::Error;
 #[derive(Debug, Error)]
 pub enum AppError {
     #[error("Configuration error: {0}")]
-    ConfigError(String),
+    Config(String),
     #[error("Process error: {0}")]
-    ProcessError(String),
+    Process(String),
     #[error("Tray UI error: {0}")]
-    TrayUiError(String),
-    #[error("Unknown error: {0}")]
-    Unknown(String),
-}
-
-impl From<std::io::Error> for AppError {
-    fn from(e: std::io::Error) -> Self {
-        AppError::Unknown(e.to_string())
-    }
+    TrayUi(String),
 }
 
 impl From<serde_json::Error> for AppError {
     fn from(e: serde_json::Error) -> Self {
-        AppError::ConfigError(e.to_string())
+        AppError::Config(e.to_string())
     }
 }
 
 // Helper for showing native error dialogs on Windows
 #[cfg(target_os = "windows")]
 pub fn show_native_error_dialog(msg: &str, caption: &str) {
-    use winapi::um::winuser::{MessageBoxW, MB_ICONERROR, MB_OK};
     use std::ptr;
+    use winapi::um::winuser::{MB_ICONERROR, MB_OK, MessageBoxW};
     let msg_w: Vec<u16> = msg.encode_utf16().chain(std::iter::once(0)).collect();
     let caption_w: Vec<u16> = caption.encode_utf16().chain(std::iter::once(0)).collect();
     unsafe {
@@ -39,4 +31,10 @@ pub fn show_native_error_dialog(msg: &str, caption: &str) {
             MB_OK | MB_ICONERROR,
         );
     }
+}
+
+// Dummy alternative for non-Windows platforms: just log the error
+#[cfg(not(target_os = "windows"))]
+pub fn show_native_error_dialog(msg: &str, caption: &str) {
+    eprintln!("{}: {}", caption, msg);
 }

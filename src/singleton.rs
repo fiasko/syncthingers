@@ -1,13 +1,12 @@
 #[cfg(target_os = "windows")]
 pub mod platform {
     use std::ptr;
-    use winapi::um::synchapi::CreateMutexW;
-    use winapi::um::errhandlingapi::GetLastError;
-    use winapi::um::winnt::LPCWSTR;
-    use winapi::um::winuser::{MessageBoxW, MB_OK};
-    use winapi::um::handleapi::CloseHandle;
     use winapi::shared::minwindef::FALSE;
     use winapi::shared::winerror::ERROR_ALREADY_EXISTS;
+    use winapi::um::errhandlingapi::GetLastError;
+    use winapi::um::handleapi::CloseHandle;
+    use winapi::um::synchapi::CreateMutexW;
+    use winapi::um::winnt::LPCWSTR;
 
     pub struct SingletonGuard {
         _private: (),
@@ -21,23 +20,24 @@ pub mod platform {
                 .collect();
             unsafe {
                 let handle = CreateMutexW(ptr::null_mut(), FALSE, mutex_name.as_ptr() as LPCWSTR);
+                if handle.is_null() {
+                    log::error!(
+                        "Failed to create mutex for singleton enforcement: {}",
+                        GetLastError()
+                    );
+                }
+
                 if handle.is_null() || GetLastError() == ERROR_ALREADY_EXISTS {
                     let msg = "Another instance of Syncthingers is already running. Exiting.\0";
                     let caption = "Syncthingers Singleton\0";
-                    MessageBoxW(
-                        ptr::null_mut(),
-                        msg.encode_utf16().collect::<Vec<u16>>().as_ptr(),
-                        caption.encode_utf16().collect::<Vec<u16>>().as_ptr(),
-                        MB_OK,
-                    );
+                    crate::error_handling::show_native_error_dialog(msg, caption);
                     if !handle.is_null() {
                         CloseHandle(handle);
                     }
                     return None;
                 }
-                // Store handle in the struct if you want to release it on drop
             }
-            Some(SingletonGuard { _private: () })
+            Some(SingletonGuard { _private: ()})
         }
     }
 }
@@ -45,12 +45,12 @@ pub mod platform {
 #[cfg(not(target_os = "windows"))]
 pub mod platform {
     pub struct SingletonGuard {
-        _private: (),
+        handle: (),
     }
     impl SingletonGuard {
         pub fn acquire() -> Option<Self> {
             // TODO: Implement file lock or other mechanism for non-Windows platforms
-            Some(SingletonGuard { _private: () })
+            Some(SingletonGuard { handle: () })
         }
     }
 }

@@ -66,9 +66,9 @@ impl TrayUi {
         if state_guard.syncthing_running()
             || state_guard.detect_and_attach_external().unwrap_or(false)
         {
-            return Ok(TrayState::Running);
+            Ok(TrayState::Running)
         } else {
-            return Ok(TrayState::Stopped);
+            Ok(TrayState::Stopped)
         }
     }
 
@@ -242,9 +242,7 @@ impl TrayUi {
 
         match app_state.lock() {
             Ok(mut state) => Self::process_menu_action(&mut state, action),
-            Err(_) => Err(AppError::TrayUi(
-                "Failed to lock app state".to_string(),
-            )),
+            Err(_) => Err(AppError::TrayUi("Failed to lock app state".to_string())),
         }
     }
 
@@ -276,14 +274,11 @@ impl TrayUi {
                         config_file_path.display()
                     );
                     // If we got here, we couldn't find any config file
-                    return Err(AppError::TrayUi(
-                        "Configuration file not found".to_string(),
-                    ));
+                    return Err(AppError::TrayUi("Configuration file not found".to_string()));
                 }
                 // Open the configuration file
-                Config::open_in_editor(&config_file_path).map_err(|e| {
-                    AppError::TrayUi(format!("Failed to open config file: {}", e))
-                })?;
+                Config::open_in_editor(&config_file_path)
+                    .map_err(|e| AppError::TrayUi(format!("Failed to open config file: {}", e)))?;
             }
             TrayMenuAction::Exit => {
                 // Handle process closure based on configuration
@@ -311,6 +306,7 @@ mod tests {
             ..Config::default()
         }
     }
+
     fn dummy_app_dirs() -> AppDirs {
         AppDirs::new(None).unwrap()
     }
@@ -339,9 +335,6 @@ mod tests {
         // We can't actually test Exit since it calls process::exit
         // but we can ensure the code path doesn't throw exceptions
         // In a real test, we'd mock std::process::exit
-
-        // Just a placeholder assertion to make the test pass
-        assert!(true);
     }
 
     #[test]

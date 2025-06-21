@@ -149,7 +149,9 @@ impl AppState {
         match &mut self.syncthing_process {
             Some(process) => {
                 if process.started_by_app {
-                    process.stop().map_err(|e| AppError::Process(format!("Failed to stop Syncthing: {}", e)))?;
+                    process.stop().map_err(|e| {
+                        AppError::Process(format!("Failed to stop Syncthing: {}", e))
+                    })?;
                     log::info!("App-started Syncthing process stopped successfully.");
                 }
             }

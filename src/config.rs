@@ -162,7 +162,7 @@ impl Config {
     }
 
     pub fn open_in_editor<P: AsRef<Path>>(path: P) -> io::Result<()> {
-        opener::open(path.as_ref()).map_err(|e| io::Error::new(io::ErrorKind::Other, e))
+        opener::open(path.as_ref()).map_err(io::Error::other)
     }
 }
 

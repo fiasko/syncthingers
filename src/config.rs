@@ -26,7 +26,7 @@ pub struct Config {
     pub startup_args: Vec<String>,
     #[serde(default)]
     pub process_closure_behavior: ProcessClosureBehavior,
-    pub auto_launch_internal: bool, // New field: auto-launch internal syncthing if external not running
+    pub auto_launch_internal: bool, // auto-launch internal syncthing if external not running
 }
 
 impl Default for Config {
@@ -37,7 +37,7 @@ impl Default for Config {
             log_level: "info".to_string(),
             syncthing_path,
             web_ui_url: "http://localhost:8384".to_string(),
-            startup_args: vec!["-no-browser".to_string()],
+            startup_args: vec![],
             process_closure_behavior: ProcessClosureBehavior::default(),
             auto_launch_internal: false, // Default: do not auto-launch
         }
@@ -45,16 +45,49 @@ impl Default for Config {
 }
 
 impl Config {
+    #[cfg(windows)]
     pub fn find_syncthing_in_path() -> Option<String> {
-        // On Windows, search for syncthing.exe in PATH
-        if let Ok(path_var) = std::env::var("PATH") {
+        let mut detected_path: Option<String> = None;
+
+        if let Some(path_var) = Self::get_windows_registry_path_env() {
             for dir in path_var.split(';') {
                 let exe_path = std::path::Path::new(dir).join("syncthing.exe");
+                if exe_path.exists() && detected_path.is_none() {
+                    log::info!("Found syncthing executable at: {}", exe_path.display());
+                    detected_path = Some(exe_path.to_string_lossy().to_string());
+                }
+                log::debug!("Current PATH (registry): {}", dir);
+            }
+        }
+
+        detected_path
+    }
+
+    #[cfg(not(windows))]
+    pub fn find_syncthing_in_path() -> Option<String> {
+        // On non-Windows platforms, search for "syncthing" in the PATH environment variable
+        if let Ok(path_var) = std::env::var("PATH") {
+            for dir in path_var.split(':') {
+                let exe_path = std::path::Path::new(dir).join("syncthing");
                 if exe_path.exists() {
                     log::info!("Found syncthing executable at: {}", exe_path.display());
                     return Some(exe_path.to_string_lossy().to_string());
                 }
+                log::debug!("Current PATH: {}", dir);
             }
+        }
+        None
+    }
+
+    #[cfg(windows)]
+    fn get_windows_registry_path_env() -> Option<String> {
+        use winreg::RegKey;
+        use winreg::enums::*;
+        let hkcu = RegKey::predef(HKEY_CURRENT_USER);
+        if let Ok(env) = hkcu.open_subkey("Environment")
+            && let Ok(path_val) = env.get_value::<String, _>("Path")
+        {
+            return Some(path_val);
         }
         None
     }
@@ -125,12 +158,10 @@ impl Config {
         let mut merged = default_value;
 
         // Update with existing values where they exist
-        if let Some(obj) = existing.as_object() {
-            if let Some(merged_obj) = merged.as_object_mut() {
-                for (key, value) in obj {
-                    if !value.is_null() {
-                        merged_obj.insert(key.clone(), value.clone());
-                    }
+        if let (Some(obj), Some(merged_obj)) = (existing.as_object(), merged.as_object_mut()) {
+            for (key, value) in obj {
+                if !value.is_null() {
+                    merged_obj.insert(key.clone(), value.clone());
                 }
             }
         }

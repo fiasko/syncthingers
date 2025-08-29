@@ -1,9 +1,11 @@
 use crate::app_dirs::AppDirs;
 use crate::config::{Config, ProcessClosureBehavior};
-use crate::error_handling::AppError;
+use crate::error_handling::{self, AppError};
 use crate::process;
 use crate::process::SyncthingProcess;
 use crate::utils::is_test_environment;
+
+use std::path::Path;
 
 /// Syncthingers application state.
 pub struct AppState {
@@ -85,6 +87,29 @@ impl AppState {
         if self.syncthing_running() {
             return Ok(());
         }
+
+        if !Path::new(&self.config.syncthing_path).exists() {
+            log::error!(
+                "Syncthing executable not found at path: {}",
+                self.config.syncthing_path
+            );
+
+            if error_handling::show_native_yes_no_question_dialog(
+                "Configured path for Syncthing does not exist. Would you like to autodetect a new path?",
+                "Syncthing path not found",
+            ) {
+                match Config::find_syncthing_in_path() {
+                    Some(path) => {
+                        log::info!("Autodetected Syncthing path: {}", path);
+                        self.config.syncthing_path = path;
+                    }
+                    None => {
+                        log::error!("Could not autodetect Syncthing path");
+                    }
+                }
+            }
+        }
+
         let exe_path = &self.config.syncthing_path;
         let args = &self.config.startup_args;
         let mut process = SyncthingProcess::new(exe_path);
@@ -198,6 +223,7 @@ impl AppState {
 mod tests {
     use super::*;
     use crate::config::ProcessClosureBehavior;
+
     fn create_test_config(closure_behavior: ProcessClosureBehavior) -> Config {
         Config {
             process_closure_behavior: closure_behavior,

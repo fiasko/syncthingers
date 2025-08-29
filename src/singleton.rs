@@ -37,7 +37,7 @@ pub mod platform {
                     return None;
                 }
             }
-            Some(SingletonGuard { _private: ()})
+            Some(SingletonGuard { _private: () })
         }
     }
 }

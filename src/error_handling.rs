@@ -33,6 +33,23 @@ pub fn show_native_error_dialog(msg: &str, caption: &str) {
     }
 }
 
+pub fn show_native_yes_no_question_dialog(msg: &str, caption: &str) -> bool {
+    use std::ptr;
+    use winapi::um::winuser::{IDYES, MB_ICONQUESTION, MB_YESNO, MessageBoxW};
+    let msg_w: Vec<u16> = msg.encode_utf16().chain(std::iter::once(0)).collect();
+    let caption_w: Vec<u16> = caption.encode_utf16().chain(std::iter::once(0)).collect();
+    let result: i32;
+    unsafe {
+        result = MessageBoxW(
+            ptr::null_mut(),
+            msg_w.as_ptr(),
+            caption_w.as_ptr(),
+            MB_YESNO | MB_ICONQUESTION,
+        );
+    }
+    result == IDYES
+}
+
 // Dummy alternative for non-Windows platforms: just log the error
 #[cfg(not(target_os = "windows"))]
 pub fn show_native_error_dialog(msg: &str, caption: &str) {

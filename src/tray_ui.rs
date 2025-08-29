@@ -84,12 +84,12 @@ impl TrayUi {
         thread::spawn(move || {
             // Get initial process state
             let initial_state = Self::get_current_process_state(&app_state);
-            if let Some(tray_ui_arc) = tray_ui_weak.upgrade() {
-                if let Ok(mut tray_ui) = tray_ui_arc.lock() {
-                    tray_ui.set_state(initial_state.0);
-                    if let Err(e) = tray_ui.recreate_tray_menu() {
-                        warn!("Failed to recreate tray menu: {}", e);
-                    }
+            if let Some(tray_ui_arc) = tray_ui_weak.upgrade()
+                && let Ok(mut tray_ui) = tray_ui_arc.lock()
+            {
+                tray_ui.set_state(initial_state.0);
+                if let Err(e) = tray_ui.recreate_tray_menu() {
+                    warn!("Failed to recreate tray menu: {}", e);
                 }
             }
 

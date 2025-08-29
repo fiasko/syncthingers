@@ -35,6 +35,7 @@ impl SyncthingProcess {
             system: System::new(),
         }
     }
+
     /// Detects if a Syncthing process is currently running and creates a SyncthingProcess instance.
     pub fn detect_process(syncthing_path: &str, external_only: bool) -> io::Result<Option<Self>> {
         use sysinfo::{ProcessesToUpdate, System};
@@ -143,6 +144,31 @@ impl SyncthingProcess {
 
         // Give the process a moment to potentially spawn children
         std::thread::sleep(std::time::Duration::from_millis(500));
+
+        if let Some(child) = &mut self.child {
+            match child.try_wait() {
+                Ok(Some(status)) => {
+                    if let Some(code) = status.code() {
+                        log::error!("Syncthing process exited immediately with code: {}", code);
+                    } else {
+                        log::error!("Syncthing process exited immediately (no exit code)");
+                    }
+                    self.child = None;
+                    self.pid = None;
+                    self.started_by_app = false;
+                    self.tracked_pids.clear();
+                    return Err(io::Error::other(
+                        "Syncthing process exited immediately after start",
+                    ));
+                }
+                Ok(None) => {
+                    // Process is alive
+                }
+                Err(e) => {
+                    log::warn!("Error checking Syncthing process status: {}", e);
+                }
+            }
+        }
 
         // Track all Syncthing processes (including any children that may have spawned)
         self.update_tracked_processes();
@@ -286,7 +312,6 @@ impl SyncthingProcess {
 /// Stops all external Syncthing processes running on the system.
 pub fn stop_external_syncthing_processes(syncthing_path: &str) -> io::Result<()> {
     use sysinfo::{ProcessesToUpdate, System};
-
     // Skip process killing for clearly test-related paths
     if utils::is_test_environment(syncthing_path) {
         log::debug!(

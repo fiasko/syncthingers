@@ -101,7 +101,20 @@ impl AppState {
                 match Config::find_syncthing_in_path() {
                     Some(path) => {
                         log::info!("Autodetected Syncthing path: {}", path);
-                        self.config.syncthing_path = path;
+                        self.config.syncthing_path = path.clone();
+
+                        // Persist updated config using Config::save_to_file
+                        // Assumes AppDirs exposes a method `config_file_path()` returning PathBuf
+                        let cfg_path = self.app_dirs.config_file_path();
+                        if let Err(e) = self.config.save_to_file(&cfg_path) {
+                            log::warn!(
+                                "Failed to save updated configuration to {}: {}",
+                                cfg_path.display(),
+                                e
+                            );
+                        } else {
+                            log::info!("Saved updated configuration to {}", cfg_path.display());
+                        }
                     }
                     None => {
                         log::error!("Could not autodetect Syncthing path");

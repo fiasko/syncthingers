@@ -93,7 +93,7 @@ impl Config {
     }
 
     /// Saves the current Config instance to the specified file path.
-    fn save_to_file<P: AsRef<Path>>(&self, path: P) -> io::Result<()> {
+    pub fn save_to_file<P: AsRef<Path>>(&self, path: P) -> io::Result<()> {
         let data = serde_json::to_string_pretty(self).unwrap();
         let mut file = fs::File::create(&path)?;
         file.write_all(data.as_bytes())?;

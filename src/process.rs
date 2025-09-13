@@ -362,3 +362,64 @@ pub fn stop_external_syncthing_processes(syncthing_path: &str) -> io::Result<()>
 
     Ok(())
 }
+
+
+#[cfg(test)]
+mod tests {
+    use super::SyncthingProcess;
+
+    /// Debug-only test that checks whether a real Syncthing process can be detected.
+    /// Ignored by default so it won't run in CI. Run locally with:
+    /// cargo test -- --ignored
+    #[test]
+    #[ignore]
+    fn detect_real_syncthing_process() {
+        // Attempt to detect a running Syncthing process by common executable name.
+        let result = SyncthingProcess::detect_process("syncthing", false)
+            .expect("detect_process returned an IO error");
+
+        match result {
+            Some(p) => {
+                println!("Detected Syncthing process: pid={:?}, path={}", p.pid, p.syncthing_path);
+            }
+            None => {
+                panic!("No Syncthing process detected on this machine");
+            }
+        }
+    }
+
+    /// Debug-only test that checks whether a real Syncthing process can be detected
+    /// and then "attached" by collecting all related PIDs and storing them in the instance.
+    /// Ignored by default so it won't run in CI. Run locally with:
+    /// cargo test -- --ignored
+    #[test]
+    #[ignore]
+    fn detect_and_attach_real_syncthing_process() {
+        // Attempt to detect a running Syncthing process by common executable name.
+        let result = SyncthingProcess::detect_process("syncthing", false)
+            .expect("detect_process returned an IO error");
+
+        match result {
+            Some(mut proc) => {
+                // Collect all Syncthing PIDs currently present on the system for this executable name.
+                let pids = proc.find_all_syncthing_processes();
+                if pids.is_empty() {
+                    panic!("Detected a Syncthing process but no matching PIDs were found");
+                }
+
+                // Simulate attaching by storing the discovered PIDs in the instance.
+                proc.tracked_pids = pids.clone();
+
+                println!(
+                    "Attached to Syncthing main PID={:?}, tracked PIDs={:?}",
+                    proc.pid, proc.tracked_pids
+                );
+
+                assert!(!proc.tracked_pids.is_empty());
+            }
+            None => {
+                panic!("No Syncthing process detected on this machine");
+            }
+        }
+    }
+}
